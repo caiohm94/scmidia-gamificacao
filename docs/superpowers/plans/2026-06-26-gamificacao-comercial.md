@@ -118,6 +118,1088 @@
 
 ---
 
+## Task 1: Project Scaffold
+
+**Files:**
+- Create: `package.json`, `next.config.ts`, `tailwind.config.ts`, `tsconfig.json`
+- Create: `app/layout.tsx`, `app/globals.css`
+- Create: `vitest.config.ts`, `vitest.setup.ts`
+
+**Interfaces:**
+- Produces: runnable Next.js 15 dev server; `npm test` works
+
+- [ ] **Step 1: Initialize Next.js project**
+
+```bash
+npx create-next-app@latest . \
+  --typescript --tailwind --eslint \
+  --app --src-dir=false --import-alias="@/*"
+```
+
+Expected: project scaffold created, `npm run dev` starts on port 3000.
+
+- [ ] **Step 2: Install dependencies**
+
+```bash
+npm install @supabase/supabase-js @supabase/ssr \
+  zod react-hook-form @hookform/resolvers \
+  papaparse date-fns recharts sonner \
+  lucide-react next-themes
+
+npm install -D vitest @vitejs/plugin-react \
+  @testing-library/react @testing-library/jest-dom \
+  @testing-library/user-event jsdom
+```
+
+- [ ] **Step 3: Install shadcn/ui**
+
+```bash
+npx shadcn@latest init
+# Choose: Default style, Slate base color, CSS variables yes
+npx shadcn@latest add button input label card badge \
+  table tabs dialog sheet form select textarea \
+  dropdown-menu avatar separator toast progress
+```
+
+- [ ] **Step 4: Configure Vitest**
+
+Create `vitest.config.ts`:
+```ts
+import { defineConfig } from 'vitest/config'
+import react from '@vitejs/plugin-react'
+import path from 'path'
+
+export default defineConfig({
+  plugins: [react()],
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./vitest.setup.ts'],
+    globals: true,
+  },
+  resolve: {
+    alias: { '@': path.resolve(__dirname, '.') },
+  },
+})
+```
+
+Create `vitest.setup.ts`:
+```ts
+import '@testing-library/jest-dom'
+```
+
+Add to `package.json` scripts:
+```json
+"test": "vitest",
+"test:run": "vitest run"
+```
+
+- [ ] **Step 5: Configure next.config.ts**
+
+```ts
+import type { NextConfig } from 'next'
+
+const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      { protocol: 'https', hostname: '*.supabase.co' },
+      { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
+    ],
+  },
+}
+
+export default nextConfig
+```
+
+- [ ] **Step 6: Create root layout with toaster**
+
+`app/layout.tsx`:
+```tsx
+import type { Metadata } from 'next'
+import { Inter, Bebas_Neue } from 'next/font/google'
+import { Toaster } from 'sonner'
+import './globals.css'
+
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
+const bebas = Bebas_Neue({ weight: '400', subsets: ['latin'], variable: '--font-bebas' })
+
+export const metadata: Metadata = {
+  title: 'SCMídia — Gamificação Comercial',
+  description: 'Plataforma de campanhas e rankings comerciais',
+}
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="pt-BR">
+      <body className={`${inter.variable} ${bebas.variable} font-sans`}>
+        {children}
+        <Toaster richColors position="top-right" />
+      </body>
+    </html>
+  )
+}
+```
+
+Add to `tailwind.config.ts` fontFamily extension:
+```ts
+fontFamily: {
+  sans: ['var(--font-inter)', 'sans-serif'],
+  heading: ['var(--font-bebas)', 'sans-serif'],
+},
+```
+
+- [ ] **Step 7: Run dev server and verify**
+
+```bash
+npm run dev
+```
+
+Expected: `http://localhost:3000` loads with no errors in console.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add -A
+git commit -m "feat: project scaffold — Next.js 15, shadcn/ui, Vitest"
+```
+
+---
+
+## Task 2: Supabase Schema & Migrations
+
+**Files:**
+- Create: `supabase/migrations/001_schema.sql`
+- Create: `supabase/migrations/002_rls.sql`
+- Create: `supabase/migrations/003_views.sql`
+- Create: `supabase/migrations/004_triggers.sql`
+- Create: `supabase/seed.sql`
+
+**Interfaces:**
+- Produces: all migration SQL files ready to run in Supabase dashboard
+- NOTE: actual Supabase project creation and running migrations requires human action (see Step 1)
+
+- [ ] **Step 1: [HUMAN ACTION] Create Supabase project**
+
+Go to supabase.com → New Project → name: `scmidia-gamificacao`.
+Note: Project URL, anon key, service_role key.
+Enable: Authentication → Providers → Google → add OAuth credentials from Google Cloud Console.
+Add Redirect URLs: `https://<vercel-domain>/auth/callback` and `http://localhost:3000/auth/callback`.
+
+- [ ] **Step 2: Write migration 001 — all tables**
+
+`supabase/migrations/001_schema.sql`:
+```sql
+create extension if not exists "pgcrypto";
+
+create type user_role as enum ('manager', 'participant');
+create type user_function as enum ('internal_seller','external_seller','hunter','manager','auditor');
+create type user_status as enum ('active','inactive');
+create type campaign_status as enum ('draft','active','closed');
+create type rule_applies_to as enum ('all','internal_seller','external_seller','hunter');
+create type rule_category as enum ('goal','activity','behavior','bonus','penalty');
+create type rule_period as enum ('daily','weekly','monthly');
+create type transaction_origin as enum ('manual','salesforce','sap');
+create type transaction_status as enum ('active','reversed');
+create type audit_action as enum ('created','edited','reversed');
+create type bonus_trigger as enum ('manual','automatic');
+create type feed_event_type as enum ('point_earned','level_up','bonus_earned','streak_milestone','ranking_change','campaign_start','campaign_end');
+create type notification_type as enum ('point_earned','level_up','bonus_earned','streak_warning','ranking_up','system');
+
+create table teams (
+  id         uuid primary key default gen_random_uuid(),
+  name       text not null,
+  color      text not null default '#6B7280',
+  created_at timestamptz not null default now()
+);
+
+create table users (
+  id         uuid primary key references auth.users(id) on delete cascade,
+  name       text not null,
+  email      text not null unique,
+  avatar_url text,
+  role       user_role not null default 'participant',
+  team_id    uuid references teams(id),
+  function   user_function not null default 'internal_seller',
+  status     user_status not null default 'active',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table campaigns (
+  id            uuid primary key default gen_random_uuid(),
+  name          text not null,
+  slug          text not null unique,
+  description   text,
+  rules         text,
+  prizes        text,
+  banner_url    text,
+  theme         jsonb not null default '{}',
+  status        campaign_status not null default 'draft',
+  starts_at     timestamptz,
+  ends_at       timestamptz,
+  display_token text not null default encode(gen_random_bytes(24),'hex'),
+  created_by    uuid not null references users(id),
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now()
+);
+
+create table campaign_participants (
+  id                 uuid primary key default gen_random_uuid(),
+  campaign_id        uuid not null references campaigns(id) on delete cascade,
+  user_id            uuid not null references users(id) on delete cascade,
+  joined_at          timestamptz not null default now(),
+  current_streak     integer not null default 0,
+  longest_streak     integer not null default 0,
+  last_activity_date date,
+  unique(campaign_id, user_id)
+);
+
+create table levels (
+  id          uuid primary key default gen_random_uuid(),
+  campaign_id uuid not null references campaigns(id) on delete cascade,
+  name        text not null,
+  min_points  integer not null default 0,
+  badge_icon  text not null default '🏅',
+  color       text not null default '#6B7280',
+  perks       jsonb not null default '{}',
+  "order"     integer not null default 0
+);
+
+create table scoring_rules (
+  id            uuid primary key default gen_random_uuid(),
+  campaign_id   uuid not null references campaigns(id) on delete cascade,
+  name          text not null,
+  description   text,
+  points        integer not null,
+  applies_to    rule_applies_to not null default 'all',
+  category      rule_category not null default 'goal',
+  target_value  integer,
+  target_period rule_period,
+  is_active     boolean not null default true,
+  created_at    timestamptz not null default now()
+);
+
+create table scoring_rule_exceptions (
+  id              uuid primary key default gen_random_uuid(),
+  scoring_rule_id uuid not null references scoring_rules(id) on delete cascade,
+  user_id         uuid not null references users(id) on delete cascade,
+  points_override integer not null,
+  reason          text,
+  unique(scoring_rule_id, user_id)
+);
+
+create table point_transactions (
+  id              uuid primary key default gen_random_uuid(),
+  campaign_id     uuid not null references campaigns(id),
+  user_id         uuid not null references users(id),
+  scoring_rule_id uuid references scoring_rules(id),
+  points          integer not null,
+  event_date      date not null default current_date,
+  description     text,
+  attachment_url  text,
+  origin          transaction_origin not null default 'manual',
+  status          transaction_status not null default 'active',
+  import_batch_id uuid,
+  created_by      uuid not null references users(id),
+  created_at      timestamptz not null default now()
+);
+
+create table point_audit_logs (
+  id              uuid primary key default gen_random_uuid(),
+  transaction_id  uuid not null references point_transactions(id),
+  action          audit_action not null,
+  changed_by      uuid not null references users(id),
+  previous_points integer,
+  new_points      integer,
+  reason          text,
+  created_at      timestamptz not null default now()
+);
+
+create table bonuses (
+  id             uuid primary key default gen_random_uuid(),
+  campaign_id    uuid not null references campaigns(id) on delete cascade,
+  name           text not null,
+  description    text,
+  points         integer not null default 0,
+  badge_icon     text not null default '⭐',
+  trigger_type   bonus_trigger not null default 'manual',
+  trigger_config jsonb not null default '{}',
+  created_at     timestamptz not null default now()
+);
+
+create table user_bonuses (
+  id             uuid primary key default gen_random_uuid(),
+  bonus_id       uuid not null references bonuses(id),
+  user_id        uuid not null references users(id),
+  campaign_id    uuid not null references campaigns(id),
+  awarded_at     timestamptz not null default now(),
+  awarded_by     uuid not null references users(id),
+  transaction_id uuid references point_transactions(id)
+);
+
+create table feed_events (
+  id          uuid primary key default gen_random_uuid(),
+  campaign_id uuid not null references campaigns(id),
+  user_id     uuid not null references users(id),
+  event_type  feed_event_type not null,
+  payload     jsonb not null default '{}',
+  created_at  timestamptz not null default now()
+);
+
+create table celebration_events (
+  id           uuid primary key default gen_random_uuid(),
+  campaign_id  uuid not null references campaigns(id),
+  user_id      uuid not null references users(id),
+  points       integer not null,
+  rule_name    text,
+  message      text,
+  triggered_at timestamptz not null default now()
+);
+
+create table notifications (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null references users(id) on delete cascade,
+  campaign_id uuid references campaigns(id),
+  type        notification_type not null,
+  title       text not null,
+  body        text not null,
+  read_at     timestamptz,
+  created_at  timestamptz not null default now()
+);
+
+create index on point_transactions(campaign_id, user_id, status);
+create index on point_transactions(campaign_id, event_date);
+create index on feed_events(campaign_id, created_at desc);
+create index on notifications(user_id, read_at);
+create index on campaign_participants(campaign_id, user_id);
+```
+
+- [ ] **Step 3: Write migration 002 — RLS**
+
+`supabase/migrations/002_rls.sql`:
+```sql
+alter table teams enable row level security;
+alter table users enable row level security;
+alter table campaigns enable row level security;
+alter table campaign_participants enable row level security;
+alter table levels enable row level security;
+alter table scoring_rules enable row level security;
+alter table scoring_rule_exceptions enable row level security;
+alter table point_transactions enable row level security;
+alter table point_audit_logs enable row level security;
+alter table bonuses enable row level security;
+alter table user_bonuses enable row level security;
+alter table feed_events enable row level security;
+alter table celebration_events enable row level security;
+alter table notifications enable row level security;
+
+create or replace function auth_role()
+returns text language sql stable as
+$$ select role from users where id = auth.uid() $$;
+
+create policy "teams_select" on teams for select using (true);
+create policy "teams_write" on teams for all using (auth_role() = 'manager');
+
+create policy "users_select" on users for select using (true);
+create policy "users_insert" on users for insert with check (auth_role() = 'manager');
+create policy "users_update" on users for update using (id = auth.uid() or auth_role() = 'manager');
+
+create policy "campaigns_select" on campaigns for select using (true);
+create policy "campaigns_insert" on campaigns for insert with check (auth_role() = 'manager');
+create policy "campaigns_update" on campaigns for update using (auth_role() = 'manager');
+create policy "campaigns_delete" on campaigns for delete using (auth_role() = 'manager');
+
+create policy "cp_select" on campaign_participants for select using (true);
+create policy "cp_write" on campaign_participants for all using (auth_role() = 'manager');
+
+create policy "levels_select" on levels for select using (true);
+create policy "levels_write" on levels for all using (auth_role() = 'manager');
+
+create policy "rules_select" on scoring_rules for select using (true);
+create policy "rules_write" on scoring_rules for all using (auth_role() = 'manager');
+
+create policy "exceptions_select" on scoring_rule_exceptions for select using (true);
+create policy "exceptions_write" on scoring_rule_exceptions for all using (auth_role() = 'manager');
+
+create policy "bonuses_select" on bonuses for select using (true);
+create policy "bonuses_write" on bonuses for all using (auth_role() = 'manager');
+
+create policy "user_bonuses_select" on user_bonuses for select using (true);
+create policy "user_bonuses_write" on user_bonuses for all using (auth_role() = 'manager');
+
+create policy "pt_select" on point_transactions for select
+  using (user_id = auth.uid() or auth_role() = 'manager');
+create policy "pt_insert" on point_transactions for insert with check (auth_role() = 'manager');
+create policy "pt_update" on point_transactions for update using (auth_role() = 'manager');
+
+create policy "audit_select" on point_audit_logs for select using (auth_role() = 'manager');
+create policy "audit_insert" on point_audit_logs for insert with check (auth_role() = 'manager');
+
+create policy "feed_select" on feed_events for select using (
+  auth_role() = 'manager' or
+  exists (select 1 from campaign_participants cp
+    where cp.campaign_id = feed_events.campaign_id and cp.user_id = auth.uid())
+);
+
+create policy "celebrations_select" on celebration_events for select using (
+  auth_role() = 'manager' or
+  exists (select 1 from campaign_participants cp
+    where cp.campaign_id = celebration_events.campaign_id and cp.user_id = auth.uid())
+);
+
+create policy "notifications_select" on notifications for select
+  using (user_id = auth.uid() or auth_role() = 'manager');
+create policy "notifications_update" on notifications for update
+  using (user_id = auth.uid());
+```
+
+- [ ] **Step 4: Write migration 003 — ranking view**
+
+`supabase/migrations/003_views.sql`:
+```sql
+create or replace view campaign_rankings as
+select
+  cp.campaign_id,
+  cp.user_id,
+  u.name,
+  u.avatar_url,
+  u.function,
+  t.name  as team_name,
+  t.color as team_color,
+  t.id    as team_id,
+  coalesce(sum(pt.points) filter (where pt.status = 'active'), 0) as total_points,
+  cp.current_streak,
+  cp.longest_streak,
+  rank() over (
+    partition by cp.campaign_id
+    order by coalesce(sum(pt.points) filter (where pt.status = 'active'), 0) desc
+  ) as position
+from campaign_participants cp
+join users u on u.id = cp.user_id
+left join teams t on t.id = u.team_id
+left join point_transactions pt
+  on pt.user_id = cp.user_id and pt.campaign_id = cp.campaign_id
+group by cp.campaign_id, cp.user_id, u.name, u.avatar_url,
+         u.function, t.name, t.color, t.id,
+         cp.current_streak, cp.longest_streak;
+```
+
+- [ ] **Step 5: Write migration 004 — triggers**
+
+`supabase/migrations/004_triggers.sql`:
+```sql
+-- Sync auth.users → public.users
+create or replace function handle_new_auth_user()
+returns trigger language plpgsql security definer as $$
+begin
+  insert into public.users (id, name, email, avatar_url)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data->>'full_name', new.email),
+    new.email,
+    new.raw_user_meta_data->>'avatar_url'
+  )
+  on conflict (id) do nothing;
+  return new;
+end;
+$$;
+
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function handle_new_auth_user();
+
+-- updated_at triggers
+create or replace function set_updated_at()
+returns trigger language plpgsql as $$
+begin new.updated_at = now(); return new; end;
+$$;
+
+create trigger users_updated_at before update on users
+  for each row execute function set_updated_at();
+create trigger campaigns_updated_at before update on campaigns
+  for each row execute function set_updated_at();
+
+-- Main point transaction trigger
+create or replace function handle_new_point_transaction()
+returns trigger language plpgsql security definer as $$
+declare
+  v_rule_name    text;
+  v_user_name    text;
+  v_campaign_name text;
+begin
+  select name into v_rule_name from scoring_rules where id = new.scoring_rule_id;
+  select name into v_user_name from users where id = new.user_id;
+  select name into v_campaign_name from campaigns where id = new.campaign_id;
+
+  insert into feed_events (campaign_id, user_id, event_type, payload)
+  values (new.campaign_id, new.user_id, 'point_earned', jsonb_build_object(
+    'points', new.points, 'rule_name', coalesce(v_rule_name,'Bônus'),
+    'user_name', v_user_name, 'description', new.description
+  ));
+
+  if new.points > 0 then
+    insert into celebration_events (campaign_id, user_id, points, rule_name, message)
+    values (new.campaign_id, new.user_id, new.points,
+      coalesce(v_rule_name,'Bônus'),
+      v_user_name || ' marcou ' || new.points || ' pontos!');
+  end if;
+
+  insert into notifications (user_id, campaign_id, type, title, body)
+  values (new.user_id, new.campaign_id, 'point_earned',
+    'Você recebeu ' || new.points || ' pontos!',
+    coalesce(v_rule_name,'Bônus') || ' — ' || v_campaign_name);
+
+  update campaign_participants set
+    last_activity_date = new.event_date,
+    current_streak = case
+      when last_activity_date = new.event_date - interval '1 day' then current_streak + 1
+      when last_activity_date = new.event_date then current_streak
+      else 1 end,
+    longest_streak = greatest(longest_streak, case
+      when last_activity_date = new.event_date - interval '1 day' then current_streak + 1
+      when last_activity_date = new.event_date then current_streak
+      else 1 end)
+  where campaign_id = new.campaign_id and user_id = new.user_id;
+
+  insert into point_audit_logs (transaction_id, action, changed_by, new_points)
+  values (new.id, 'created', new.created_by, new.points);
+
+  return new;
+end;
+$$;
+
+create trigger on_point_transaction_insert
+  after insert on point_transactions
+  for each row execute function handle_new_point_transaction();
+
+-- Level-up detection
+create or replace function check_level_upgrade()
+returns trigger language plpgsql security definer as $$
+declare
+  v_total integer; v_new record; v_old record; v_user_name text;
+begin
+  select coalesce(sum(points) filter (where status='active'),0)
+  into v_total from point_transactions
+  where campaign_id=new.campaign_id and user_id=new.user_id;
+
+  select * into v_new from levels
+  where campaign_id=new.campaign_id and min_points<=v_total
+  order by min_points desc limit 1;
+  if v_new is null then return new; end if;
+
+  select * into v_old from levels
+  where campaign_id=new.campaign_id and min_points<=(v_total-new.points)
+  order by min_points desc limit 1;
+
+  if v_old is null or v_old.id <> v_new.id then
+    select name into v_user_name from users where id=new.user_id;
+    insert into feed_events (campaign_id,user_id,event_type,payload)
+    values (new.campaign_id,new.user_id,'level_up',jsonb_build_object(
+      'user_name',v_user_name,'level_name',v_new.name,'level_icon',v_new.badge_icon));
+    insert into notifications (user_id,campaign_id,type,title,body)
+    values (new.user_id,new.campaign_id,'level_up',
+      'Você subiu de nível! '||v_new.badge_icon,
+      'Parabéns! Você alcançou o nível '||v_new.name);
+  end if;
+  return new;
+end;
+$$;
+
+create trigger on_point_check_level
+  after insert on point_transactions
+  for each row execute function check_level_upgrade();
+
+-- Streak milestones
+create or replace function check_streak_milestone()
+returns trigger language plpgsql security definer as $$
+declare v_streak integer; v_user_name text;
+begin
+  select current_streak into v_streak from campaign_participants
+  where campaign_id=new.campaign_id and user_id=new.user_id;
+  if v_streak is null or v_streak not in (5,10,15,20) then return new; end if;
+  select name into v_user_name from users where id=new.user_id;
+  insert into feed_events (campaign_id,user_id,event_type,payload)
+  values (new.campaign_id,new.user_id,'streak_milestone',
+    jsonb_build_object('user_name',v_user_name,'streak',v_streak));
+  insert into notifications (user_id,campaign_id,type,title,body)
+  values (new.user_id,new.campaign_id,'bonus_earned',
+    '🔥 '||v_streak||' dias seguidos!',
+    'Incrível! Você manteve uma sequência de '||v_streak||' dias.');
+  return new;
+end;
+$$;
+
+create trigger on_point_check_streak_milestone
+  after insert on point_transactions
+  for each row execute function check_streak_milestone();
+```
+
+- [ ] **Step 6: Write seed.sql**
+
+`supabase/seed.sql`:
+```sql
+insert into teams (name, color) values
+  ('Mobile', '#3B82F6'),
+  ('Têxtil', '#10B981'),
+  ('Comunicação Visual', '#F59E0B'),
+  ('Hunters', '#8B5CF6');
+```
+
+- [ ] **Step 7: [HUMAN ACTION] Run migrations**
+
+After creating the Supabase project and setting credentials, run:
+```bash
+npm install -g supabase
+supabase login
+supabase link --project-ref <your-project-ref>
+supabase db push
+```
+
+- [ ] **Step 8: Commit migration files**
+
+```bash
+git add supabase/
+git commit -m "feat: supabase schema — tables, RLS, views, triggers"
+```
+
+---
+
+## Task 3: Authentication & Middleware
+
+**Files:**
+- Create: `lib/supabase/client.ts`, `lib/supabase/server.ts`, `lib/supabase/admin.ts`
+- Create: `lib/auth/helpers.ts`
+- Create: `middleware.ts`
+- Create: `app/(auth)/login/page.tsx`
+- Create: `app/(auth)/auth/callback/route.ts`
+- Create: `.env.local.example`
+
+**Interfaces:**
+- Produces: `createClient()` (browser), `createClient()` from server (async), `createAdminClient()`, middleware routing by role, `/login` page
+
+- [ ] **Step 1: Create .env.local.example**
+
+```bash
+# .env.local.example
+NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGc...
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGc...
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+Add `.env.local` to `.gitignore` (not `.env.local.example`).
+
+- [ ] **Step 2: Browser Supabase client**
+
+`lib/supabase/client.ts`:
+```ts
+import { createBrowserClient } from '@supabase/ssr'
+import type { Database } from '@/types/database'
+
+export function createClient() {
+  return createBrowserClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+}
+```
+
+- [ ] **Step 3: Server Supabase client**
+
+`lib/supabase/server.ts`:
+```ts
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+import type { Database } from '@/types/database'
+
+export async function createClient() {
+  const cookieStore = await cookies()
+  return createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll: () => cookieStore.getAll(),
+        setAll: (cs) => {
+          try { cs.forEach(({ name, value, options }) => cookieStore.set(name, value, options)) } catch {}
+        },
+      },
+    }
+  )
+}
+```
+
+- [ ] **Step 4: Admin Supabase client**
+
+`lib/supabase/admin.ts`:
+```ts
+import { createClient } from '@supabase/supabase-js'
+import type { Database } from '@/types/database'
+
+export function createAdminClient() {
+  return createClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  )
+}
+```
+
+- [ ] **Step 5: Auth helpers**
+
+`lib/auth/helpers.ts`:
+```ts
+import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+
+export async function requireAuth() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+  return user
+}
+
+export async function requireRole(role: 'manager' | 'participant') {
+  const user = await requireAuth()
+  const supabase = await createClient()
+  const { data } = await supabase.from('users').select('role').eq('id', user.id).single()
+  if (!data || data.role !== role) redirect('/login')
+  return user
+}
+
+export async function getSessionUser() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+  const { data } = await supabase
+    .from('users').select('*, teams(name, color)').eq('id', user.id).single()
+  return data
+}
+```
+
+- [ ] **Step 6: Middleware**
+
+`middleware.ts`:
+```ts
+import { createServerClient } from '@supabase/ssr'
+import { NextResponse, type NextRequest } from 'next/server'
+
+export async function middleware(request: NextRequest) {
+  let response = NextResponse.next({ request })
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll: () => request.cookies.getAll(),
+        setAll: (cs) => {
+          cs.forEach(({ name, value }) => request.cookies.set(name, value))
+          response = NextResponse.next({ request })
+          cs.forEach(({ name, value, options }) => response.cookies.set(name, value, options))
+        },
+      },
+    }
+  )
+
+  const { data: { user } } = await supabase.auth.getUser()
+  const path = request.nextUrl.pathname
+
+  if (path.startsWith('/login') || path.startsWith('/auth') || path.startsWith('/display')) {
+    return response
+  }
+  if (!user) return NextResponse.redirect(new URL('/login', request.url))
+
+  const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single()
+  if (path.startsWith('/manager') && profile?.role !== 'manager')
+    return NextResponse.redirect(new URL('/participant/dashboard', request.url))
+  if (path.startsWith('/participant') && profile?.role !== 'participant')
+    return NextResponse.redirect(new URL('/manager/dashboard', request.url))
+
+  return response
+}
+
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|ico)).*)'],
+}
+```
+
+- [ ] **Step 7: Auth callback route**
+
+`app/(auth)/auth/callback/route.ts`:
+```ts
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+import { NextResponse, type NextRequest } from 'next/server'
+
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url)
+  const code = searchParams.get('code')
+  const cookieStore = await cookies()
+
+  if (code) {
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll: () => cookieStore.getAll(),
+          setAll: (cs) => cs.forEach(({ name, value, options }) => cookieStore.set(name, value, options)),
+        },
+      }
+    )
+    await supabase.auth.exchangeCodeForSession(code)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single()
+      const dest = profile?.role === 'manager' ? '/manager/dashboard' : '/participant/dashboard'
+      return NextResponse.redirect(new URL(dest, request.url))
+    }
+  }
+  return NextResponse.redirect(new URL('/login?error=auth_failed', request.url))
+}
+```
+
+- [ ] **Step 8: Login page**
+
+`app/(auth)/login/page.tsx`:
+```tsx
+'use client'
+import { createClient } from '@/lib/supabase/client'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+
+export default function LoginPage() {
+  const supabase = createClient()
+
+  async function handleGoogleLogin() {
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+        queryParams: { hd: 'scmidia.com.br' },
+      },
+    })
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-900 to-black">
+      <Card className="w-full max-w-sm border-yellow-500/20 bg-black/80 text-white">
+        <CardHeader className="text-center space-y-2">
+          <div className="text-5xl">🏆</div>
+          <CardTitle className="text-2xl font-bold text-yellow-400">Missão Hexa</CardTitle>
+          <p className="text-sm text-gray-400">SCMídia — Gamificação Comercial</p>
+        </CardHeader>
+        <CardContent>
+          <Button onClick={handleGoogleLogin}
+            className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold">
+            Entrar com Google @scmidia.com.br
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+```
+
+- [ ] **Step 9: Write auth unit test**
+
+`__tests__/auth/redirect.test.ts`:
+```ts
+import { describe, it, expect } from 'vitest'
+
+function resolveDestination(role: string | undefined) {
+  return role === 'manager' ? '/manager/dashboard' : '/participant/dashboard'
+}
+
+describe('auth redirect logic', () => {
+  it('redirects manager to manager dashboard', () => {
+    expect(resolveDestination('manager')).toBe('/manager/dashboard')
+  })
+  it('redirects participant to participant dashboard', () => {
+    expect(resolveDestination('participant')).toBe('/participant/dashboard')
+  })
+  it('redirects unknown role to participant dashboard', () => {
+    expect(resolveDestination(undefined)).toBe('/participant/dashboard')
+  })
+})
+```
+
+Run: `npm run test:run`
+Expected: 3 tests pass.
+
+- [ ] **Step 10: Commit**
+
+```bash
+git add lib/ middleware.ts app/\(auth\)/ __tests__/
+git commit -m "feat: auth — Google OAuth, middleware role routing, login page"
+```
+
+---
+
+## Task 4: Database Types
+
+**Files:**
+- Create: `types/database.ts`
+
+**Interfaces:**
+- Produces: `Database` type, `Tables<T>`, `Enums<T>`, `UserProfile`, `CampaignRanking`, `CampaignTheme`
+- NOTE: `npx supabase gen types` requires Supabase project credentials in `.env.local`
+
+- [ ] **Step 1: Create placeholder types file**
+
+Create `types/database.ts` with manual types (to be regenerated after Supabase is live):
+```ts
+// Auto-generated types will replace this file after: npx supabase gen types typescript --project-id <ref> > types/database.ts
+// For now, define the minimum needed for TypeScript to compile
+
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
+
+export interface Database {
+  public: {
+    Tables: {
+      users: { Row: UserRow; Insert: Partial<UserRow>; Update: Partial<UserRow> }
+      campaigns: { Row: CampaignRow; Insert: Partial<CampaignRow>; Update: Partial<CampaignRow> }
+      campaign_participants: { Row: CampaignParticipantRow; Insert: Partial<CampaignParticipantRow>; Update: Partial<CampaignParticipantRow> }
+      teams: { Row: TeamRow; Insert: Partial<TeamRow>; Update: Partial<TeamRow> }
+      scoring_rules: { Row: ScoringRuleRow; Insert: Partial<ScoringRuleRow>; Update: Partial<ScoringRuleRow> }
+      scoring_rule_exceptions: { Row: ScoringRuleExceptionRow; Insert: Partial<ScoringRuleExceptionRow>; Update: Partial<ScoringRuleExceptionRow> }
+      point_transactions: { Row: PointTransactionRow; Insert: Partial<PointTransactionRow>; Update: Partial<PointTransactionRow> }
+      point_audit_logs: { Row: PointAuditLogRow; Insert: Partial<PointAuditLogRow>; Update: Partial<PointAuditLogRow> }
+      levels: { Row: LevelRow; Insert: Partial<LevelRow>; Update: Partial<LevelRow> }
+      bonuses: { Row: BonusRow; Insert: Partial<BonusRow>; Update: Partial<BonusRow> }
+      user_bonuses: { Row: UserBonusRow; Insert: Partial<UserBonusRow>; Update: Partial<UserBonusRow> }
+      feed_events: { Row: FeedEventRow; Insert: Partial<FeedEventRow>; Update: Partial<FeedEventRow> }
+      celebration_events: { Row: CelebrationEventRow; Insert: Partial<CelebrationEventRow>; Update: Partial<CelebrationEventRow> }
+      notifications: { Row: NotificationRow; Insert: Partial<NotificationRow>; Update: Partial<NotificationRow> }
+    }
+    Views: {
+      campaign_rankings: { Row: CampaignRankingRow }
+    }
+    Enums: {
+      user_role: 'manager' | 'participant'
+      user_function: 'internal_seller' | 'external_seller' | 'hunter' | 'manager' | 'auditor'
+      user_status: 'active' | 'inactive'
+      campaign_status: 'draft' | 'active' | 'closed'
+      rule_applies_to: 'all' | 'internal_seller' | 'external_seller' | 'hunter'
+      rule_category: 'goal' | 'activity' | 'behavior' | 'bonus' | 'penalty'
+      rule_period: 'daily' | 'weekly' | 'monthly'
+      transaction_origin: 'manual' | 'salesforce' | 'sap'
+      transaction_status: 'active' | 'reversed'
+      audit_action: 'created' | 'edited' | 'reversed'
+      bonus_trigger: 'manual' | 'automatic'
+      feed_event_type: 'point_earned' | 'level_up' | 'bonus_earned' | 'streak_milestone' | 'ranking_change' | 'campaign_start' | 'campaign_end'
+      notification_type: 'point_earned' | 'level_up' | 'bonus_earned' | 'streak_warning' | 'ranking_up' | 'system'
+    }
+  }
+}
+
+interface UserRow {
+  id: string; name: string; email: string; avatar_url: string | null
+  role: 'manager' | 'participant'; team_id: string | null
+  function: 'internal_seller' | 'external_seller' | 'hunter' | 'manager' | 'auditor'
+  status: 'active' | 'inactive'; created_at: string; updated_at: string
+}
+interface TeamRow { id: string; name: string; color: string; created_at: string }
+interface CampaignRow {
+  id: string; name: string; slug: string; description: string | null; rules: string | null
+  prizes: string | null; banner_url: string | null; theme: Json
+  status: 'draft' | 'active' | 'closed'; starts_at: string | null; ends_at: string | null
+  display_token: string; created_by: string; created_at: string; updated_at: string
+}
+interface CampaignParticipantRow {
+  id: string; campaign_id: string; user_id: string; joined_at: string
+  current_streak: number; longest_streak: number; last_activity_date: string | null
+}
+interface ScoringRuleRow {
+  id: string; campaign_id: string; name: string; description: string | null; points: number
+  applies_to: 'all' | 'internal_seller' | 'external_seller' | 'hunter'
+  category: 'goal' | 'activity' | 'behavior' | 'bonus' | 'penalty'
+  target_value: number | null; target_period: 'daily' | 'weekly' | 'monthly' | null
+  is_active: boolean; created_at: string
+}
+interface ScoringRuleExceptionRow {
+  id: string; scoring_rule_id: string; user_id: string; points_override: number; reason: string | null
+}
+interface PointTransactionRow {
+  id: string; campaign_id: string; user_id: string; scoring_rule_id: string | null
+  points: number; event_date: string; description: string | null; attachment_url: string | null
+  origin: 'manual' | 'salesforce' | 'sap'; status: 'active' | 'reversed'
+  import_batch_id: string | null; created_by: string; created_at: string
+}
+interface PointAuditLogRow {
+  id: string; transaction_id: string; action: 'created' | 'edited' | 'reversed'
+  changed_by: string; previous_points: number | null; new_points: number | null
+  reason: string | null; created_at: string
+}
+interface LevelRow {
+  id: string; campaign_id: string; name: string; min_points: number
+  badge_icon: string; color: string; perks: Json; order: number
+}
+interface BonusRow {
+  id: string; campaign_id: string; name: string; description: string | null
+  points: number; badge_icon: string; trigger_type: 'manual' | 'automatic'
+  trigger_config: Json; created_at: string
+}
+interface UserBonusRow {
+  id: string; bonus_id: string; user_id: string; campaign_id: string
+  awarded_at: string; awarded_by: string; transaction_id: string | null
+}
+interface FeedEventRow {
+  id: string; campaign_id: string; user_id: string
+  event_type: 'point_earned' | 'level_up' | 'bonus_earned' | 'streak_milestone' | 'ranking_change' | 'campaign_start' | 'campaign_end'
+  payload: Json; created_at: string
+}
+interface CelebrationEventRow {
+  id: string; campaign_id: string; user_id: string; points: number
+  rule_name: string | null; message: string | null; triggered_at: string
+}
+interface NotificationRow {
+  id: string; user_id: string; campaign_id: string | null
+  type: 'point_earned' | 'level_up' | 'bonus_earned' | 'streak_warning' | 'ranking_up' | 'system'
+  title: string; body: string; read_at: string | null; created_at: string
+}
+interface CampaignRankingRow {
+  campaign_id: string; user_id: string; name: string; avatar_url: string | null
+  function: string; team_name: string | null; team_color: string | null; team_id: string | null
+  total_points: number; current_streak: number; longest_streak: number; position: number
+}
+
+// Convenience helpers
+export type Tables<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row']
+export type Enums<T extends keyof Database['public']['Enums']> = Database['public']['Enums'][T]
+
+export type UserProfile = Tables<'users'> & { teams: { name: string; color: string } | null }
+
+export type CampaignRanking = {
+  campaign_id: string; user_id: string; name: string; avatar_url: string | null
+  function: string; team_name: string | null; team_color: string | null; team_id: string | null
+  total_points: number; current_streak: number; longest_streak: number; position: number
+}
+
+export type CampaignTheme = {
+  primary?: string; secondary?: string; accent?: string; dark?: string
+  font_heading?: string; font_body?: string
+  icons?: { points: string; streak: string; bonus: string; penalty: string; trophy: string }
+}
+```
+
+- [ ] **Step 2: Verify TypeScript compiles**
+
+```bash
+npx tsc --noEmit
+```
+
+Expected: no errors (or only errors about missing .env.local, which is expected).
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add types/
+git commit -m "feat: database types — manual placeholders, regenerate after Supabase live"
+```
+
+---
+
 ## Task 5: Zod Schemas (shared client + server)
 
 **Files:**
