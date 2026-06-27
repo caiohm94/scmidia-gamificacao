@@ -128,3 +128,33 @@
     @apply font-sans;
   }
 }
+
+/* ─── Missão Hexa campaign theme ─────────────────────────────────────── */
+/* Brazilian flag palette: green #009C3B, yellow #FFDF00, blue #002776   */
+@theme {
+  --color-hexa-green: #009C3B;
+  --color-hexa-yellow: #FFDF00;
+  --color-hexa-blue: #002776;
+  --color-hexa-white: #FFFFFF;
+
+  /* Alias to generic campaign slots so components stay theme-agnostic */
+  --color-campaign-primary: var(--color-hexa-green);
+  --color-campaign-secondary: var(--color-hexa-yellow);
+  --color-campaign-accent: var(--color-hexa-blue);
+}
+
+/* World Cup / Missão Hexa typography helpers */
+.font-hexa-heading {
+  font-family: var(--font-bebas), sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.text-hexa-gold {
+  color: var(--color-hexa-yellow);
+  text-shadow: 0 1px 4px rgb(0 0 0 / 0.4);
+}
+
+.bg-hexa-field {
+  background: linear-gradient(160deg, #005C20 0%, #003A14 100%);
+}
