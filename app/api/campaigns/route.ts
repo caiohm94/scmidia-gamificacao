@@ -21,8 +21,9 @@ export async function POST(request: Request) {
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 
   const admin = createAdminClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await admin.from('campaigns')
-    .insert({ ...parsed.data, created_by: user.id }).select().single()
+    .insert({ ...parsed.data, created_by: user.id } as any).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data, { status: 201 })
 }

@@ -1,5 +1,5 @@
 'use client'
-import { useForm } from 'react-hook-form'
+import { useForm, type Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { campaignSchema, type CampaignInput } from '@/schemas/campaign'
 import { Button } from '@/components/ui/button'
@@ -15,7 +15,7 @@ interface Props { defaultValues?: Partial<CampaignInput>; campaignId?: string }
 export function CampaignForm({ defaultValues, campaignId }: Props) {
   const router = useRouter()
   const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } =
-    useForm<CampaignInput>({ resolver: zodResolver(campaignSchema), defaultValues })
+    useForm<CampaignInput>({ resolver: zodResolver(campaignSchema) as unknown as Resolver<CampaignInput>, defaultValues })
 
   async function onSubmit(values: CampaignInput) {
     const url = campaignId ? `/api/campaigns/${campaignId}` : '/api/campaigns'

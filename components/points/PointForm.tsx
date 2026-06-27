@@ -1,5 +1,5 @@
 'use client'
-import { useForm } from 'react-hook-form'
+import { useForm, type Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { pointSchema, type PointInput } from '@/schemas/point'
 import { Button } from '@/components/ui/button'
@@ -19,7 +19,7 @@ interface Props {
 export function PointForm({ participants, campaigns, rules }: Props) {
   const router = useRouter()
   const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } =
-    useForm<PointInput>({ resolver: zodResolver(pointSchema), defaultValues: { event_date: new Date().toISOString().slice(0, 10), origin: 'manual' } })
+    useForm<PointInput>({ resolver: zodResolver(pointSchema) as unknown as Resolver<PointInput>, defaultValues: { event_date: new Date().toISOString().slice(0, 10), origin: 'manual' } })
 
   const selectedCampaign = watch('campaign_id')
   const filteredRules = rules.filter(r => r.campaign_id === selectedCampaign)
@@ -37,14 +37,14 @@ export function PointForm({ participants, campaigns, rules }: Props) {
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-w-lg">
       <div className="space-y-1">
         <Label>Campanha</Label>
-        <Select onValueChange={v => setValue('campaign_id', v)}>
+        <Select onValueChange={v => setValue('campaign_id', v as string)}>
           <SelectTrigger><SelectValue placeholder="Selecione a campanha" /></SelectTrigger>
           <SelectContent>{campaigns.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
         </Select>
       </div>
       <div className="space-y-1">
         <Label>Participante</Label>
-        <Select onValueChange={v => setValue('user_id', v)}>
+        <Select onValueChange={v => setValue('user_id', v as string)}>
           <SelectTrigger><SelectValue placeholder="Selecione o participante" /></SelectTrigger>
           <SelectContent>{participants.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
         </Select>
@@ -52,8 +52,8 @@ export function PointForm({ participants, campaigns, rules }: Props) {
       <div className="space-y-1">
         <Label>Critério</Label>
         <Select onValueChange={v => {
-          setValue('scoring_rule_id', v)
-          const rule = rules.find(r => r.id === v)
+          setValue('scoring_rule_id', v as string)
+          const rule = rules.find(r => r.id === (v as string))
           if (rule) setValue('points', rule.points)
         }}>
           <SelectTrigger><SelectValue placeholder="Selecione o critério" /></SelectTrigger>

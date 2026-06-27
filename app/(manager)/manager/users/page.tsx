@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { requireRole } from '@/lib/auth/helpers'
+import type { UserProfile } from '@/types/database'
 import { Avatar } from '@/components/shared/Avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -8,8 +9,8 @@ import Link from 'next/link'
 export default async function UsersPage() {
   await requireRole('manager')
   const supabase = await createClient()
-  const { data: users } = await supabase
-    .from('users').select('*, teams(name, color)').order('name')
+  const result = await supabase.from('users').select('*, teams(name, color)').order('name')
+  const users = result.data as UserProfile[] | null
 
   return (
     <div className="p-6 space-y-4">
@@ -39,12 +40,9 @@ export default async function UsersPage() {
                   </div>
                 </td>
                 <td className="px-4 py-3">
-                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                  {(u as any).teams && (
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    <Badge style={{ backgroundColor: (u as any).teams.color + '20', color: (u as any).teams.color }}>
-                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                      {(u as any).teams.name}
+                  {u.teams && (
+                    <Badge style={{ backgroundColor: u.teams.color + '20', color: u.teams.color }}>
+                      {u.teams.name}
                     </Badge>
                   )}
                 </td>
