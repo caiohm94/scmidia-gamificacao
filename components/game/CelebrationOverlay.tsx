@@ -16,7 +16,7 @@ interface Props { event: CelebrationEvent | null; onDone: () => void }
 export function CelebrationOverlay({ event, onDone }: Props) {
   useEffect(() => {
     if (!event) return
-    const t = setTimeout(onDone, 8000)
+    const t = setTimeout(onDone, 5000)
     return () => clearTimeout(t)
   }, [event, onDone])
 
