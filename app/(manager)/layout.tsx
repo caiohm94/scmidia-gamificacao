@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { requireAuth } from '@/lib/auth/helpers'
+import { requireRole } from '@/lib/auth/helpers'
 import { LayoutDashboard, Trophy, Users, Target, History, Upload } from 'lucide-react'
 
 const navItems = [
@@ -13,7 +13,7 @@ const navItems = [
 ]
 
 export default async function ManagerLayout({ children }: { children: React.ReactNode }) {
-  await requireAuth()
+  await requireRole('manager')
   return (
     <div className="flex min-h-screen">
       <aside className="w-64 bg-gray-950 text-white flex flex-col">
