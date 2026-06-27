@@ -7,8 +7,8 @@ export const campaignSchema = z.object({
   rules: z.string().optional(),
   prizes: z.string().optional(),
   status: z.enum(['draft','active','closed']),
-  starts_at: z.string().datetime().nullable(),
-  ends_at: z.string().datetime().nullable(),
+  starts_at: z.string().nullable().optional(),
+  ends_at: z.string().nullable().optional(),
   theme: z.record(z.string(), z.unknown()).default({}),
 })
 
