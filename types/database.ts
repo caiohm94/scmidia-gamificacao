@@ -7,6 +7,7 @@ export interface Database {
   public: {
     Tables: {
       users: { Row: UserRow; Insert: Partial<UserRow>; Update: Partial<UserRow>; Relationships: [] }
+      salesforce_sync_state: { Row: SalesforceSyncStateRow; Insert: Partial<SalesforceSyncStateRow>; Update: Partial<SalesforceSyncStateRow>; Relationships: [] }
       campaigns: { Row: CampaignRow; Insert: Partial<CampaignRow>; Update: Partial<CampaignRow>; Relationships: [] }
       campaign_participants: { Row: CampaignParticipantRow; Insert: Partial<CampaignParticipantRow>; Update: Partial<CampaignParticipantRow>; Relationships: [] }
       teams: { Row: TeamRow; Insert: Partial<TeamRow>; Update: Partial<TeamRow>; Relationships: [] }
@@ -50,6 +51,7 @@ type UserRow = {
   role: 'manager' | 'participant'; team_id: string | null
   function: 'internal_seller' | 'external_seller' | 'hunter' | 'manager' | 'auditor'
   status: 'active' | 'inactive'; created_at: string; updated_at: string
+  sf_alias: string | null
 }
 type TeamRow = { id: string; name: string; color: string; created_at: string }
 type CampaignRow = {
@@ -69,6 +71,13 @@ type ScoringRuleRow = {
   category: 'goal' | 'activity' | 'behavior' | 'bonus' | 'penalty'
   target_value: number | null; target_period: 'daily' | 'weekly' | 'monthly' | null
   is_active: boolean; created_at: string
+  data_origin: 'manual' | 'salesforce'
+  sf_soql: string | null
+  sf_value_field: string | null
+  sf_alias_field: string | null
+  sf_frequency: '5min' | 'daily' | 'weekly' | null
+  sf_run_time: string | null
+  sf_run_day: number | null
 }
 type ScoringRuleExceptionRow = {
   id: string; scoring_rule_id: string; user_id: string; points_override: number; reason: string | null
@@ -111,6 +120,11 @@ type NotificationRow = {
   type: 'point_earned' | 'level_up' | 'bonus_earned' | 'streak_warning' | 'ranking_up' | 'system'
   title: string; body: string; read_at: string | null; created_at: string
 }
+export type SalesforceSyncStateRow = {
+  scoring_rule_id: string; user_id: string
+  last_value: number; last_synced_at: string
+}
+
 type CampaignRankingRow = {
   campaign_id: string; user_id: string; name: string; avatar_url: string | null
   function: string; team_name: string | null; team_color: string | null; team_id: string | null
