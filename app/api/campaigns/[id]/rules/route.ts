@@ -48,3 +48,27 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data, { status: 201 })
 }
+
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { data: profile } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (profile?.role !== 'manager') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  const { rule_id, is_active } = await request.json() as { rule_id: string; is_active: boolean }
+  const admin = createAdminClient()
+  const { data, error } = await admin.from('scoring_rules')
+    .update({ is_active }).eq('id', rule_id).eq('campaign_id', id).select().single()
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json(data)
+}
