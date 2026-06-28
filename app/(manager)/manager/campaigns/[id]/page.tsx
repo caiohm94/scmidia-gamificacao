@@ -13,6 +13,7 @@ import { Trophy, Tv, Users, ListChecks, Edit, Target } from 'lucide-react'
 import { CopyButton } from '@/components/shared/CopyButton'
 import { ParticipantPhotoUpload } from '@/components/campaign/ParticipantPhotoUpload'
 import { EditRuleButton } from '@/components/campaign/EditRuleButton'
+import { SyncRuleButton } from '@/components/campaign/SyncRuleButton'
 
 const statusLabel: Record<string, string> = { draft: 'Rascunho', active: 'Ativa', closed: 'Encerrada' }
 const statusColor: Record<string, string> = { draft: 'rgba(63,62,62,0.45)', active: '#5C7435', closed: 'rgba(63,62,62,0.3)' }
@@ -41,10 +42,10 @@ export default async function CampaignDetailPage({ params }: Props) {
     .order('joined_at', { ascending: false })
   const participants = (participantsRaw ?? []) as unknown as ParticipantRow[]
 
-  type RuleRow = { id: string; name: string; points: number; target_period: string | null; description: string | null; is_active: boolean }
+  type RuleRow = { id: string; name: string; points: number; target_period: string | null; description: string | null; is_active: boolean; data_origin: string }
   const { data: rulesRaw } = await supabase
     .from('scoring_rules')
-    .select('id, name, points, target_period, description, is_active')
+    .select('id, name, points, target_period, description, is_active, data_origin')
     .eq('campaign_id', id)
     .order('created_at', { ascending: true })
   const rules = (rulesRaw ?? []) as unknown as RuleRow[]
@@ -129,6 +130,9 @@ export default async function CampaignDetailPage({ params }: Props) {
                       <p style={{ fontFamily: 'var(--font-outfit, sans-serif)', fontWeight: 700, fontSize: '0.875rem', color: '#3F3E3E' }}>{r.points} pts</p>
                       {r.target_period && <p style={{ fontSize: '0.7rem', color: 'rgba(63,62,62,0.4)' }}>{r.target_period}</p>}
                     </div>
+                    {r.data_origin === 'salesforce' && (
+                      <SyncRuleButton ruleId={r.id} ruleName={r.name} />
+                    )}
                     <EditRuleButton campaignId={id} rule={r} />
                     <ToggleRuleButton campaignId={id} ruleId={r.id} isActive={r.is_active} />
                   </div>
