@@ -4,6 +4,7 @@ import { Avatar } from '@/components/shared/Avatar'
 import Image from 'next/image'
 import Link from 'next/link'
 import { ParticipantNav } from '@/components/shared/ParticipantNav'
+import { SignOutButton } from '@/components/shared/SignOutButton'
 
 export default async function ParticipantLayout({ children }: { children: React.ReactNode }) {
   await requireRole('participant')
@@ -22,13 +23,7 @@ export default async function ParticipantLayout({ children }: { children: React.
         <div className="flex items-center gap-3">
           <NotificationBell />
           <Avatar src={user?.avatar_url} name={user?.name ?? ''} size={30} />
-          <form action="/auth/signout" method="POST">
-            <button type="submit" style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.35)', background: 'none', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '0 0.4rem 0.4rem 0.4rem', padding: '0.25rem 0.65rem', cursor: 'pointer', transition: 'color 0.15s' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#fff' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.35)' }}>
-              Sair
-            </button>
-          </form>
+          <SignOutButton />
         </div>
       </header>
       <main className="max-w-5xl mx-auto p-6">{children}</main>

@@ -29,11 +29,12 @@ export default async function ManagerRankingsPage({ searchParams }: { searchPara
         <div className="flex items-center gap-3">
           {/* Campaign selector */}
           {(campaigns ?? []).length > 1 && (
-            <form method="GET">
-              <select name="campaign_id" defaultValue={activeCampaignId ?? ''} onChange={e => (e.target.form as HTMLFormElement).submit()}
+            <form method="GET" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <select name="campaign_id" defaultValue={activeCampaignId ?? ''}
                 style={{ border: '1px solid rgba(63,62,62,0.2)', borderRadius: '0 0.4rem 0.4rem 0.4rem', padding: '0.35rem 0.75rem', fontSize: '0.8rem', color: '#3F3E3E' }}>
                 {(campaigns ?? []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
+              <button type="submit" className="sc-btn-primary text-sm cursor-pointer" style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem' }}>Filtrar</button>
             </form>
           )}
           <a href={`/api/rankings/export?campaign_id=${activeCampaignId}`}>

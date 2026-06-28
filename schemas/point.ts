@@ -14,7 +14,7 @@ export type PointInput = z.infer<typeof pointSchema>
 
 export const csvRowSchema = z.object({
   participante: z.string().min(1),
-  criterio: z.string().min(1),
+  criterio: z.string().optional(),
   pontos: z.coerce.number().int(),
   data: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   observacao: z.string().optional(),

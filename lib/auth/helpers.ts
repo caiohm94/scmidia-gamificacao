@@ -15,7 +15,10 @@ export async function requireRole(role: 'manager' | 'participant') {
   const user = await requireAuth()
   const supabase = await createClient()
   const { data } = await supabase.from('users').select('role').eq('id', user.id).single()
-  if (!data || data.role !== role) redirect('/login')
+  if (!data) redirect('/login')
+  if (data.role !== role) {
+    redirect(data.role === 'manager' ? '/manager/dashboard' : '/participant/dashboard')
+  }
   return user
 }
 
