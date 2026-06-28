@@ -3,8 +3,8 @@ import { requireRole } from '@/lib/auth/helpers'
 import { CampaignForm } from '@/components/campaign/CampaignForm'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
 import type { CampaignInput } from '@/schemas/campaign'
+import { Trophy } from 'lucide-react'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -30,14 +30,26 @@ export default async function EditCampaignPage({ params }: Props) {
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-2xl">
-      <div className="flex items-center gap-3">
+    <div>
+      <div className="sc-page-header">
+        <div className="flex items-center gap-3">
+          <div style={{ width: 36, height: 36, borderRadius: '0 0.5rem 0.5rem 0.5rem', background: 'rgba(141,178,60,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Trophy size={18} color="#8DB23C" />
+          </div>
+          <div>
+            <h1 className="sc-page-title">Editar campanha</h1>
+            <p style={{ fontSize: '0.8rem', color: 'rgba(63,62,62,0.5)', fontFamily: 'var(--font-outfit, sans-serif)' }}>{campaign.name}</p>
+          </div>
+        </div>
         <Link href={`/manager/campaigns/${id}`}>
-          <Button variant="outline" size="sm">← Voltar</Button>
+          <button className="sc-btn-outline text-sm cursor-pointer">← Voltar</button>
         </Link>
-        <h1 className="text-2xl font-bold">Editar campanha</h1>
       </div>
-      <CampaignForm defaultValues={defaultValues} campaignId={id} />
+      <div className="p-6">
+        <div className="sc-card max-w-2xl">
+          <CampaignForm defaultValues={defaultValues} campaignId={id} />
+        </div>
+      </div>
     </div>
   )
 }
