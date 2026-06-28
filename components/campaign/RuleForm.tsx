@@ -8,6 +8,10 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
 
+const categoryLabels: Record<string, string> = { goal: 'Meta', activity: 'Atividade', behavior: 'Comportamento', bonus: 'Bônus', penalty: 'Penalidade' }
+const appliesToLabels: Record<string, string> = { all: 'Todos', internal_seller: 'Vendedor Interno', external_seller: 'Vendedor Externo', hunter: 'Hunter' }
+const periodLabels: Record<string, string> = { daily: 'Diário', weekly: 'Semanal', monthly: 'Mensal' }
+
 interface Props { campaignId: string }
 
 export function RuleForm({ campaignId }: Props) {
@@ -67,7 +71,7 @@ export function RuleForm({ campaignId }: Props) {
         <div className="space-y-1">
           <Label>Categoria</Label>
           <Select value={form.category} onValueChange={v => setForm(f => ({ ...f, category: v as string }))}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger><span>{categoryLabels[form.category]}</span></SelectTrigger>
             <SelectContent>
               <SelectItem value="goal">Meta</SelectItem>
               <SelectItem value="activity">Atividade</SelectItem>
@@ -80,7 +84,7 @@ export function RuleForm({ campaignId }: Props) {
         <div className="space-y-1">
           <Label>Aplica-se a</Label>
           <Select value={form.applies_to} onValueChange={v => setForm(f => ({ ...f, applies_to: v as string }))}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger><span>{appliesToLabels[form.applies_to]}</span></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
               <SelectItem value="internal_seller">Vendedor Interno</SelectItem>
@@ -92,7 +96,7 @@ export function RuleForm({ campaignId }: Props) {
         <div className="space-y-1">
           <Label>Período</Label>
           <Select value={form.target_period} onValueChange={v => setForm(f => ({ ...f, target_period: v as string }))}>
-            <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
+            <SelectTrigger><span>{form.target_period ? periodLabels[form.target_period] : 'Opcional'}</span></SelectTrigger>
             <SelectContent>
               <SelectItem value="daily">Diário</SelectItem>
               <SelectItem value="weekly">Semanal</SelectItem>

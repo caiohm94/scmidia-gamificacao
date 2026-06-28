@@ -8,6 +8,13 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-outfit), var(--font-bebas), sans-serif;
+  /* SCMídia brand colors */
+  --color-sc-onyx: #3F3E3E;
+  --color-sc-green: #8DB23C;
+  --color-sc-pear: #BACB3A;
+  --color-sc-fern: #5C7435;
+  --color-sc-jungle: #229877;
   --font-mono: ui-monospace, monospace;
   --font-heading: var(--font-bebas), sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
@@ -157,4 +164,83 @@
 
 .bg-hexa-field {
   background: linear-gradient(160deg, #005C20 0%, #003A14 100%);
+}
+
+/* ─── SCMídia brand system ───────────────────────────────────────────── */
+/* Cores: Onyx #3F3E3E | Apple Green #8DB23C | Pear #BACB3A             */
+/* Forma característica: 3 cantos arredondados + 1 canto reto (top-left) */
+
+.sc-card {
+  background: #ffffff;
+  border: 1px solid rgba(63,62,62,0.12);
+  border-radius: 0 0.75rem 0.75rem 0.75rem; /* top-left reto = forma SCMídia */
+  padding: 1.25rem 1.5rem;
+}
+
+.sc-card-accent {
+  background: #ffffff;
+  border: 1px solid rgba(141,178,60,0.3);
+  border-radius: 0 0.75rem 0.75rem 0.75rem;
+  padding: 1.25rem 1.5rem;
+  border-left: 3px solid #8DB23C;
+}
+
+.sc-heading {
+  font-family: var(--font-outfit), sans-serif;
+  font-weight: 600;
+  color: #3F3E3E;
+  letter-spacing: -0.02em;
+}
+
+.sc-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  font-family: var(--font-outfit), sans-serif;
+  background: rgba(141,178,60,0.12);
+  color: #5C7435;
+  border-radius: 0 0.4rem 0.4rem 0.4rem; /* forma SCMídia mini */
+}
+
+.sc-btn-primary {
+  background: #8DB23C;
+  color: #ffffff;
+  font-family: var(--font-outfit), sans-serif;
+  font-weight: 500;
+  border-radius: 0 0.5rem 0.5rem 0.5rem;
+  padding: 0.5rem 1.25rem;
+  transition: background 0.15s;
+}
+.sc-btn-primary:hover { background: #7a9e32; }
+
+.sc-btn-outline {
+  background: transparent;
+  color: #3F3E3E;
+  border: 1.5px solid rgba(63,62,62,0.3);
+  font-family: var(--font-outfit), sans-serif;
+  font-weight: 500;
+  border-radius: 0 0.5rem 0.5rem 0.5rem;
+  padding: 0.5rem 1.25rem;
+  transition: border-color 0.15s, color 0.15s;
+}
+.sc-btn-outline:hover { border-color: #8DB23C; color: #8DB23C; }
+
+/* Page header bar for manager pages */
+.sc-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.75rem;
+  background: #ffffff;
+  border-bottom: 1px solid rgba(63,62,62,0.1);
+}
+
+.sc-page-title {
+  font-family: var(--font-outfit), sans-serif;
+  font-size: 1.375rem;
+  font-weight: 600;
+  color: #3F3E3E;
+  letter-spacing: -0.025em;
 }

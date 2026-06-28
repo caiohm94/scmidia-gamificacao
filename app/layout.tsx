@@ -1,10 +1,11 @@
 import type { Metadata } from 'next'
-import { Inter, Bebas_Neue } from 'next/font/google'
+import { Inter, Bebas_Neue, Outfit } from 'next/font/google'
 import { Toaster } from 'sonner'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 const bebas = Bebas_Neue({ weight: '400', subsets: ['latin'], variable: '--font-bebas' })
+const outfit = Outfit({ subsets: ['latin'], variable: '--font-outfit', weight: ['300', '400', '500', '600', '700'] })
 
 export const metadata: Metadata = {
   title: 'SCMídia — Gamificação Comercial',
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" className={`${inter.variable} ${bebas.variable} h-full antialiased`}>
+    <html lang="pt-BR" className={`${inter.variable} ${bebas.variable} ${outfit.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-sans">
         {children}
         <Toaster richColors position="top-right" />
