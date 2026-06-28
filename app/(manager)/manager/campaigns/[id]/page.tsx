@@ -11,6 +11,8 @@ import { ptBR } from 'date-fns/locale'
 import { headers } from 'next/headers'
 import { Trophy, Tv, Users, ListChecks, Edit, Target } from 'lucide-react'
 import { CopyButton } from '@/components/shared/CopyButton'
+import { ParticipantPhotoUpload } from '@/components/campaign/ParticipantPhotoUpload'
+import { EditRuleButton } from '@/components/campaign/EditRuleButton'
 
 const statusLabel: Record<string, string> = { draft: 'Rascunho', active: 'Ativa', closed: 'Encerrada' }
 const statusColor: Record<string, string> = { draft: 'rgba(63,62,62,0.45)', active: '#5C7435', closed: 'rgba(63,62,62,0.3)' }
@@ -31,10 +33,10 @@ export default async function CampaignDetailPage({ params }: Props) {
   const { data: campaign } = await supabase.from('campaigns').select('*').eq('id', id).single()
   if (!campaign) notFound()
 
-  type ParticipantRow = { id: string; user_id: string; joined_at: string; users: { name: string; email: string } | null }
+  type ParticipantRow = { id: string; user_id: string; joined_at: string; photo_url: string | null; users: { name: string; email: string } | null }
   const { data: participantsRaw } = await supabase
     .from('campaign_participants')
-    .select('id, user_id, joined_at, users(name, email)')
+    .select('id, user_id, joined_at, photo_url, users(name, email)')
     .eq('campaign_id', id)
     .order('joined_at', { ascending: false })
   const participants = (participantsRaw ?? []) as unknown as ParticipantRow[]
@@ -127,6 +129,7 @@ export default async function CampaignDetailPage({ params }: Props) {
                       <p style={{ fontFamily: 'var(--font-outfit, sans-serif)', fontWeight: 700, fontSize: '0.875rem', color: '#3F3E3E' }}>{r.points} pts</p>
                       {r.target_period && <p style={{ fontSize: '0.7rem', color: 'rgba(63,62,62,0.4)' }}>{r.target_period}</p>}
                     </div>
+                    <EditRuleButton campaignId={id} rule={r} />
                     <ToggleRuleButton campaignId={id} ruleId={r.id} isActive={r.is_active} />
                   </div>
                 </div>
@@ -154,6 +157,12 @@ export default async function CampaignDetailPage({ params }: Props) {
               {participants.map((p, i) => (
                 <div key={p.id} className="flex items-center justify-between px-4 py-3"
                   style={{ borderTop: i > 0 ? '1px solid rgba(63,62,62,0.07)' : 'none' }}>
+                  <ParticipantPhotoUpload
+                    campaignId={id}
+                    userId={p.user_id}
+                    currentPhotoUrl={p.photo_url}
+                    participantName={p.users?.name ?? '?'}
+                  />
                   <div>
                     <p style={{ fontWeight: 500, fontSize: '0.875rem', color: '#3F3E3E' }}>{p.users?.name ?? '—'}</p>
                     <p style={{ fontSize: '0.75rem', color: 'rgba(63,62,62,0.5)' }}>{p.users?.email}</p>

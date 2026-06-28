@@ -1,22 +1,38 @@
 'use client'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { userSchema, type UserInput } from '@/schemas/user'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 
-interface Props { defaultValues?: Partial<UserInput>; userId?: string }
+const functionLabels: Record<string, string> = {
+  internal_seller: 'Vendedor Interno',
+  external_seller: 'Vendedor Externo',
+  hunter: 'Hunter',
+  manager: 'Gestor',
+  auditor: 'Auditor',
+}
+const roleLabels: Record<string, string> = { manager: 'Gestor', participant: 'Participante' }
+const statusLabels: Record<string, string> = { active: 'Ativo', inactive: 'Inativo' }
 
-export function UserForm({ defaultValues, userId }: Props) {
+interface Props {
+  defaultValues?: Partial<UserInput>
+  userId?: string
+  teams?: { id: string; name: string; color: string }[]
+}
+
+export function UserForm({ defaultValues, userId, teams = [] }: Props) {
   const router = useRouter()
+  const [funcVal, setFuncVal] = useState(defaultValues?.function ?? 'internal_seller')
+  const [roleVal, setRoleVal] = useState(defaultValues?.role ?? 'participant')
+  const [statusVal, setStatusVal] = useState(defaultValues?.status ?? 'active')
+  const [teamVal, setTeamVal] = useState(defaultValues?.team_id ?? '')
+
   const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } =
     useForm<UserInput>({
       resolver: zodResolver(userSchema),
-      defaultValues: { status: 'active', team_id: null, ...defaultValues },
+      defaultValues: { status: 'active', team_id: null, role: 'participant', function: 'internal_seller', ...defaultValues },
     })
 
   async function onSubmit(values: UserInput) {
@@ -27,69 +43,98 @@ export function UserForm({ defaultValues, userId }: Props) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(values),
     })
-    if (!res.ok) { toast.error('Erro ao salvar usuário'); return }
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      toast.error(err.error ?? 'Erro ao salvar usuário')
+      return
+    }
     toast.success(userId ? 'Usuário atualizado!' : 'Usuário criado!')
     router.push('/manager/users')
     router.refresh()
   }
 
+  const labelStyle = { fontSize: '0.8rem', fontWeight: 500, color: '#3F3E3E', fontFamily: 'var(--font-outfit, sans-serif)', display: 'block', marginBottom: '0.35rem' } as const
+  const inputStyle = { width: '100%', border: '1px solid rgba(63,62,62,0.2)', borderRadius: '0 0.4rem 0.4rem 0.4rem', padding: '0.5rem 0.75rem', fontSize: '0.85rem', color: '#3F3E3E', outline: 'none', background: '#fff', fontFamily: 'inherit' } as const
+  const selectStyle = { ...inputStyle, cursor: 'pointer' }
+  const errorStyle = { fontSize: '0.72rem', color: '#c0622a', marginTop: '0.25rem' } as const
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-w-lg">
-      <div className="space-y-1">
-        <Label>Nome</Label>
-        <Input {...register('name')} placeholder="Nome completo" />
-        {errors.name && <p className="text-xs text-red-500">{errors.name.message}</p>}
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <div>
+        <label style={labelStyle}>Nome *</label>
+        <input {...register('name')} style={inputStyle} placeholder="Nome completo" />
+        {errors.name && <p style={errorStyle}>{errors.name.message}</p>}
       </div>
-      <div className="space-y-1">
-        <Label>E-mail</Label>
-        <Input {...register('email')} type="email" placeholder="nome@scmidia.com.br" />
-        {errors.email && <p className="text-xs text-red-500">{errors.email.message}</p>}
+
+      <div>
+        <label style={labelStyle}>E-mail *</label>
+        <input {...register('email')} type="email" style={inputStyle} placeholder="nome@scmidia.com.br" />
+        {errors.email && <p style={errorStyle}>{errors.email.message}</p>}
       </div>
-      <div className="space-y-1">
-        <Label>Função</Label>
-        <Select
-          onValueChange={v => setValue('function', v as UserInput['function'])}
-          defaultValue={defaultValues?.function}
-        >
-          <SelectTrigger><SelectValue placeholder="Selecione a função" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="internal_seller">Vendedor Interno</SelectItem>
-            <SelectItem value="external_seller">Vendedor Externo</SelectItem>
-            <SelectItem value="hunter">Hunter</SelectItem>
-            <SelectItem value="manager">Gestor</SelectItem>
-            <SelectItem value="auditor">Auditor</SelectItem>
-          </SelectContent>
-        </Select>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label style={labelStyle}>Função *</label>
+          <select
+            value={funcVal}
+            onChange={e => { setFuncVal(e.target.value as UserInput['function']); setValue('function', e.target.value as UserInput['function']) }}
+            style={selectStyle}
+          >
+            <option value="internal_seller">Vendedor Interno</option>
+            <option value="external_seller">Vendedor Externo</option>
+            <option value="hunter">Hunter</option>
+            <option value="manager">Gestor</option>
+            <option value="auditor">Auditor</option>
+          </select>
+        </div>
+        <div>
+          <label style={labelStyle}>Perfil *</label>
+          <select
+            value={roleVal}
+            onChange={e => { setRoleVal(e.target.value as UserInput['role']); setValue('role', e.target.value as UserInput['role']) }}
+            style={selectStyle}
+          >
+            <option value="participant">Participante</option>
+            <option value="manager">Gestor</option>
+          </select>
+        </div>
       </div>
-      <div className="space-y-1">
-        <Label>Perfil</Label>
-        <Select
-          onValueChange={v => setValue('role', v as UserInput['role'])}
-          defaultValue={defaultValues?.role ?? 'participant'}
-        >
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="manager">Gestor</SelectItem>
-            <SelectItem value="participant">Participante</SelectItem>
-          </SelectContent>
-        </Select>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label style={labelStyle}>Status *</label>
+          <select
+            value={statusVal}
+            onChange={e => { setStatusVal(e.target.value as UserInput['status']); setValue('status', e.target.value as UserInput['status']) }}
+            style={selectStyle}
+          >
+            <option value="active">Ativo</option>
+            <option value="inactive">Inativo</option>
+          </select>
+        </div>
+        {teams.length > 0 && (
+          <div>
+            <label style={labelStyle}>Time</label>
+            <select
+              value={teamVal ?? ''}
+              onChange={e => { setTeamVal(e.target.value); setValue('team_id', e.target.value || null) }}
+              style={selectStyle}
+            >
+              <option value="">Sem time</option>
+              {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+          </div>
+        )}
       </div>
-      <div className="space-y-1">
-        <Label>Status</Label>
-        <Select
-          onValueChange={v => setValue('status', v as UserInput['status'])}
-          defaultValue={defaultValues?.status ?? 'active'}
-        >
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="active">Ativo</SelectItem>
-            <SelectItem value="inactive">Inativo</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <Button type="submit" disabled={isSubmitting}>
+
+      <button
+        type="submit"
+        disabled={isSubmitting}
+        className="sc-btn-primary cursor-pointer"
+        style={{ padding: '0.6rem 1.5rem', fontSize: '0.875rem', opacity: isSubmitting ? 0.7 : 1 }}
+      >
         {isSubmitting ? 'Salvando...' : userId ? 'Salvar alterações' : 'Criar usuário'}
-      </Button>
+      </button>
     </form>
   )
 }

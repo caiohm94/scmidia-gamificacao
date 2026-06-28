@@ -61,6 +61,7 @@ type CampaignRow = {
 type CampaignParticipantRow = {
   id: string; campaign_id: string; user_id: string; joined_at: string
   current_streak: number; longest_streak: number; last_activity_date: string | null
+  photo_url: string | null
 }
 type ScoringRuleRow = {
   id: string; campaign_id: string; name: string; description: string | null; points: number

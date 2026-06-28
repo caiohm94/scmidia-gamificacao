@@ -43,6 +43,7 @@ export async function POST(request: Request) {
     description: parsed.data.description ?? 'Saldo inicial',
     origin: 'manual' as const,
     scoring_rule_id: null,
+    created_by: user.id,
   }))
 
   const { data, error } = await admin.from('point_transactions').insert(rows).select()
