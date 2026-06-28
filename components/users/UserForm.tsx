@@ -28,6 +28,7 @@ export function UserForm({ defaultValues, userId, teams = [] }: Props) {
   const [roleVal, setRoleVal] = useState(defaultValues?.role ?? 'participant')
   const [statusVal, setStatusVal] = useState(defaultValues?.status ?? 'active')
   const [teamVal, setTeamVal] = useState(defaultValues?.team_id ?? '')
+  const [sfAlias, setSfAlias] = useState(defaultValues?.sf_alias ?? '')
 
   const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } =
     useForm<UserInput>({
@@ -125,6 +126,24 @@ export function UserForm({ defaultValues, userId, teams = [] }: Props) {
             </select>
           </div>
         )}
+      </div>
+
+      <div style={{ marginTop: '0.5rem', paddingTop: '1rem', borderTop: '1px solid rgba(63,62,62,0.1)' }}>
+        <p style={{ fontSize: '0.7rem', fontWeight: 600, color: 'rgba(63,62,62,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '0.75rem' }}>
+          Integração Salesforce
+        </p>
+        <div>
+          <label style={labelStyle}>Alias no Salesforce</label>
+          <input
+            value={sfAlias}
+            onChange={e => { setSfAlias(e.target.value); setValue('sf_alias', e.target.value || null) }}
+            style={inputStyle}
+            placeholder="jsmith"
+          />
+          <p style={{ fontSize: '0.68rem', color: 'rgba(63,62,62,0.4)', marginTop: '0.2rem' }}>
+            Alias exato do usuário no Salesforce. Usado para mapear resultados da SOQL.
+          </p>
+        </div>
       </div>
 
       <button

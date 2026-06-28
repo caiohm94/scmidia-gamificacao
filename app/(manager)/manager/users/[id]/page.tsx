@@ -15,12 +15,12 @@ export default async function EditUserPage({ params }: Props) {
   type UserWithTeam = {
     id: string; name: string; email: string; role: 'manager' | 'participant'
     function: 'internal_seller' | 'external_seller' | 'hunter' | 'manager' | 'auditor'
-    status: 'active' | 'inactive'; team_id: string | null
+    status: 'active' | 'inactive'; team_id: string | null; sf_alias: string | null
     teams: { id: string; name: string; color: string } | null
   }
   const { data: user } = await supabase
     .from('users')
-    .select('id, name, email, role, function, status, team_id, teams(id, name, color)')
+    .select('id, name, email, role, function, status, team_id, sf_alias, teams(id, name, color)')
     .eq('id', id)
     .single() as { data: UserWithTeam | null; error: unknown }
 
@@ -57,6 +57,7 @@ export default async function EditUserPage({ params }: Props) {
               function: user.function,
               status: user.status,
               team_id: user.team_id ?? null,
+              sf_alias: user.sf_alias ?? null,
             }}
           />
         </div>
