@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/integrations/salesforce/sync",
+      "schedule": "*/5 * * * *"
+    }
+  ]
+}
