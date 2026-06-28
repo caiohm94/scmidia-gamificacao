@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { requireRole } from '@/lib/auth/helpers'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { RuleForm } from '@/components/campaign/RuleForm'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { format } from 'date-fns'
@@ -81,9 +82,7 @@ export default async function CampaignDetailPage({ params }: Props) {
           <h2 className="text-lg font-semibold">Regras de pontuação</h2>
           <span className="text-sm text-muted-foreground">{rules.length} regra(s)</span>
         </div>
-        {rules.length === 0 ? (
-          <p className="text-sm text-muted-foreground border rounded-lg p-4">Nenhuma regra cadastrada.</p>
-        ) : (
+        {rules.length > 0 && (
           <div className="border rounded-lg divide-y">
             {rules.map(r => (
               <div key={r.id} className="p-3 flex items-center justify-between">
@@ -93,12 +92,13 @@ export default async function CampaignDetailPage({ params }: Props) {
                 </div>
                 <div className="text-right">
                   <p className="font-semibold text-sm">{r.points} pts</p>
-                  <p className="text-xs text-muted-foreground">{r.period}</p>
+                  <p className="text-xs text-muted-foreground">{r.period ?? ''}</p>
                 </div>
               </div>
             ))}
           </div>
         )}
+        <RuleForm campaignId={id} />
       </div>
 
       {/* Participantes */}
