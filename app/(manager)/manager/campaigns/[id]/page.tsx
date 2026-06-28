@@ -10,6 +10,7 @@ import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { headers } from 'next/headers'
 import { Trophy, Tv, Users, ListChecks, Edit, Target } from 'lucide-react'
+import { CopyButton } from '@/components/shared/CopyButton'
 
 const statusLabel: Record<string, string> = { draft: 'Rascunho', active: 'Ativa', closed: 'Encerrada' }
 const statusColor: Record<string, string> = { draft: 'rgba(63,62,62,0.45)', active: '#5C7435', closed: 'rgba(63,62,62,0.3)' }
@@ -38,10 +39,10 @@ export default async function CampaignDetailPage({ params }: Props) {
     .order('joined_at', { ascending: false })
   const participants = (participantsRaw ?? []) as unknown as ParticipantRow[]
 
-  type RuleRow = { id: string; name: string; points: number; period: string; description: string | null; is_active: boolean }
+  type RuleRow = { id: string; name: string; points: number; target_period: string | null; description: string | null; is_active: boolean }
   const { data: rulesRaw } = await supabase
     .from('scoring_rules')
-    .select('id, name, points, period, description, is_active')
+    .select('id, name, points, target_period, description, is_active')
     .eq('campaign_id', id)
     .order('created_at', { ascending: true })
   const rules = (rulesRaw ?? []) as unknown as RuleRow[]
@@ -97,7 +98,10 @@ export default async function CampaignDetailPage({ params }: Props) {
             <Tv size={15} color="#8DB23C" />
             <p style={{ fontSize: '0.8rem', fontWeight: 600, color: '#3F3E3E', fontFamily: 'var(--font-outfit, sans-serif)' }}>Painel TV</p>
           </div>
-          <code style={{ fontSize: '0.73rem', color: 'rgba(63,62,62,0.6)', wordBreak: 'break-all', display: 'block' }}>{tvUrl}</code>
+          <div className="flex items-center gap-2 mt-1">
+            <code style={{ fontSize: '0.73rem', color: 'rgba(63,62,62,0.6)', wordBreak: 'break-all', flex: 1 }}>{tvUrl}</code>
+            <CopyButton text={tvUrl} />
+          </div>
         </div>
 
         {/* Rules */}
@@ -121,7 +125,7 @@ export default async function CampaignDetailPage({ params }: Props) {
                   <div className="flex items-center gap-3">
                     <div className="text-right">
                       <p style={{ fontFamily: 'var(--font-outfit, sans-serif)', fontWeight: 700, fontSize: '0.875rem', color: '#3F3E3E' }}>{r.points} pts</p>
-                      {r.period && <p style={{ fontSize: '0.7rem', color: 'rgba(63,62,62,0.4)' }}>{r.period}</p>}
+                      {r.target_period && <p style={{ fontSize: '0.7rem', color: 'rgba(63,62,62,0.4)' }}>{r.target_period}</p>}
                     </div>
                     <ToggleRuleButton campaignId={id} ruleId={r.id} isActive={r.is_active} />
                   </div>

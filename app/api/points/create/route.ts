@@ -37,7 +37,7 @@ export async function POST(request: Request) {
 
   const admin = createAdminClient()
   const { data, error } = await admin.from('point_transactions')
-    .insert({ ...parsed.data, points, created_by: user.id })
+    .insert({ ...parsed.data, points })
     .select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data, { status: 201 })

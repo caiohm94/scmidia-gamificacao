@@ -34,7 +34,7 @@ export default async function ManagerDashboard() {
     supabase.from('campaigns').select('*', { count: 'exact', head: true }).eq('status', 'active'),
     supabase
       .from('point_transactions')
-      .select('id, points, created_at, users(name), scoring_rules(name), campaigns(name)')
+      .select('id, points, created_at, users!user_id(name), scoring_rules(name), campaigns(name)')
       .order('created_at', { ascending: false })
       .limit(10),
     supabase

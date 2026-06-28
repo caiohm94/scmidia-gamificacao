@@ -31,7 +31,7 @@ export default async function PointsHistoryPage({
 
   let query = supabase
     .from('point_transactions')
-    .select('id, points, event_date, status, origin, created_at, users(name), scoring_rules(name), campaigns(name)')
+    .select('id, points, event_date, status, origin, created_at, users!user_id(name), scoring_rules(name), campaigns(name)')
     .order('created_at', { ascending: false })
     .range(from, to)
 
