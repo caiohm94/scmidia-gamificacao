@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import { salesforceRuleFieldsSchema } from '@/schemas/salesforce'
 
 const updateRuleSchema = z.object({
   name: z.string().min(1).optional(),
@@ -12,7 +13,7 @@ const updateRuleSchema = z.object({
   target_value: z.number().int().optional(),
   target_period: z.enum(['daily', 'weekly', 'monthly']).optional(),
   is_active: z.boolean().optional(),
-})
+}).extend(salesforceRuleFieldsSchema.partial().shape)
 
 export async function PATCH(
   request: Request,

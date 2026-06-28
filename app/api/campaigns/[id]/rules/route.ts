@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import { salesforceRuleFieldsSchema } from '@/schemas/salesforce'
 
 const ruleSchema = z.object({
   name: z.string().min(1),
@@ -12,7 +13,7 @@ const ruleSchema = z.object({
   target_value: z.number().int().optional(),
   target_period: z.enum(['daily', 'weekly', 'monthly']).optional(),
   is_active: z.boolean().default(true),
-})
+}).extend(salesforceRuleFieldsSchema.shape)
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params

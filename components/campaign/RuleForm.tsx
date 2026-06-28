@@ -11,6 +11,8 @@ import { toast } from 'sonner'
 const categoryLabels: Record<string, string> = { goal: 'Meta', activity: 'Atividade', behavior: 'Comportamento', bonus: 'Bônus', penalty: 'Penalidade' }
 const appliesToLabels: Record<string, string> = { all: 'Todos', internal_seller: 'Vendedor Interno', external_seller: 'Vendedor Externo', hunter: 'Hunter' }
 const periodLabels: Record<string, string> = { daily: 'Diário', weekly: 'Semanal', monthly: 'Mensal' }
+const frequencyLabels: Record<string, string> = { '5min': 'A cada 5 minutos', daily: '1x por dia (horário)', weekly: '1x por semana (dia + horário)' }
+const dayLabels: Record<string, string> = { '0': 'Domingo', '1': 'Segunda-feira', '2': 'Terça-feira', '3': 'Quarta-feira', '4': 'Quinta-feira', '5': 'Sexta-feira', '6': 'Sábado' }
 
 interface Props { campaignId: string }
 
@@ -26,11 +28,28 @@ export function RuleForm({ campaignId }: Props) {
     applies_to: 'all',
     target_value: '',
     target_period: '',
+    data_origin: 'manual' as 'manual' | 'salesforce',
+    sf_soql: '',
+    sf_value_field: '',
+    sf_alias_field: 'Alias',
+    sf_frequency: '' as '5min' | 'daily' | 'weekly' | '',
+    sf_run_time: '',
+    sf_run_day: '',
   })
+
+  function resetForm() {
+    setForm({
+      name: '', description: '', points: '', category: 'goal', applies_to: 'all',
+      target_value: '', target_period: '',
+      data_origin: 'manual', sf_soql: '', sf_value_field: '', sf_alias_field: 'Alias',
+      sf_frequency: '', sf_run_time: '', sf_run_day: '',
+    })
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
+    const isSf = form.data_origin === 'salesforce'
     const body = {
       name: form.name,
       description: form.description || undefined,
@@ -39,6 +58,13 @@ export function RuleForm({ campaignId }: Props) {
       applies_to: form.applies_to,
       target_value: form.target_value ? parseInt(form.target_value) : undefined,
       target_period: form.target_period || undefined,
+      data_origin: form.data_origin,
+      sf_soql: isSf ? form.sf_soql || undefined : undefined,
+      sf_value_field: isSf ? form.sf_value_field || undefined : undefined,
+      sf_alias_field: isSf ? (form.sf_alias_field || 'Alias') : undefined,
+      sf_frequency: isSf ? form.sf_frequency || undefined : undefined,
+      sf_run_time: isSf && form.sf_run_time ? form.sf_run_time : undefined,
+      sf_run_day: isSf && form.sf_run_day !== '' ? parseInt(form.sf_run_day) : undefined,
     }
     const res = await fetch(`/api/campaigns/${campaignId}/rules`, {
       method: 'POST',
@@ -49,7 +75,7 @@ export function RuleForm({ campaignId }: Props) {
     if (!res.ok) { toast.error('Erro ao salvar regra'); return }
     toast.success('Regra criada!')
     setOpen(false)
-    setForm({ name: '', description: '', points: '', category: 'goal', applies_to: 'all', target_value: '', target_period: '' })
+    resetForm()
     router.refresh()
   }
 
@@ -70,7 +96,7 @@ export function RuleForm({ campaignId }: Props) {
         </div>
         <div className="space-y-1">
           <Label>Categoria</Label>
-          <Select value={form.category} onValueChange={v => setForm(f => ({ ...f, category: v as string }))}>
+          <Select value={form.category} onValueChange={v => setForm(f => ({ ...f, category: v ?? '' }))}>
             <SelectTrigger><span>{categoryLabels[form.category]}</span></SelectTrigger>
             <SelectContent>
               <SelectItem value="goal">Meta</SelectItem>
@@ -83,7 +109,7 @@ export function RuleForm({ campaignId }: Props) {
         </div>
         <div className="space-y-1">
           <Label>Aplica-se a</Label>
-          <Select value={form.applies_to} onValueChange={v => setForm(f => ({ ...f, applies_to: v as string }))}>
+          <Select value={form.applies_to} onValueChange={v => setForm(f => ({ ...f, applies_to: v ?? '' }))}>
             <SelectTrigger><span>{appliesToLabels[form.applies_to]}</span></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
@@ -95,7 +121,7 @@ export function RuleForm({ campaignId }: Props) {
         </div>
         <div className="space-y-1">
           <Label>Período</Label>
-          <Select value={form.target_period} onValueChange={v => setForm(f => ({ ...f, target_period: v as string }))}>
+          <Select value={form.target_period} onValueChange={v => setForm(f => ({ ...f, target_period: v ?? '' }))}>
             <SelectTrigger><span>{form.target_period ? periodLabels[form.target_period] : 'Opcional'}</span></SelectTrigger>
             <SelectContent>
               <SelectItem value="daily">Diário</SelectItem>
@@ -104,6 +130,94 @@ export function RuleForm({ campaignId }: Props) {
             </SelectContent>
           </Select>
         </div>
+
+        {/* Origem dos dados */}
+        <div className="space-y-1 col-span-2">
+          <Label>Origem dos dados</Label>
+          <Select value={form.data_origin} onValueChange={v => setForm(f => ({ ...f, data_origin: (v ?? 'manual') as 'manual' | 'salesforce' }))}>
+            <SelectTrigger><span>{form.data_origin === 'salesforce' ? 'Salesforce' : 'Manual'}</span></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="manual">Manual</SelectItem>
+              <SelectItem value="salesforce">Salesforce</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Campos Salesforce — aparecem apenas quando origem = salesforce */}
+        {form.data_origin === 'salesforce' && (
+          <>
+            <div className="space-y-1 col-span-2">
+              <Label>Query SOQL *</Label>
+              <Textarea
+                value={form.sf_soql}
+                onChange={e => setForm(f => ({ ...f, sf_soql: e.target.value }))}
+                rows={3}
+                placeholder="SELECT Alias, SUM(Amount) total FROM Opportunity WHERE StageName='Closed Won' AND CALENDAR_MONTH(CloseDate) = CALENDAR_MONTH(TODAY) GROUP BY Alias"
+                className="font-mono text-xs"
+                required
+              />
+              <p className="text-xs text-muted-foreground">A query deve retornar uma coluna de alias e uma coluna de valor numérico por usuário.</p>
+            </div>
+            <div className="space-y-1">
+              <Label>Campo do valor *</Label>
+              <Input
+                value={form.sf_value_field}
+                onChange={e => setForm(f => ({ ...f, sf_value_field: e.target.value }))}
+                placeholder="total"
+                required
+              />
+              <p className="text-xs text-muted-foreground">Nome exato da coluna com o valor numérico.</p>
+            </div>
+            <div className="space-y-1">
+              <Label>Campo do alias</Label>
+              <Input
+                value={form.sf_alias_field}
+                onChange={e => setForm(f => ({ ...f, sf_alias_field: e.target.value }))}
+                placeholder="Alias"
+              />
+            </div>
+            <div className="space-y-1 col-span-2">
+              <Label>Frequência de sincronização *</Label>
+              <Select value={form.sf_frequency} onValueChange={v => setForm(f => ({ ...f, sf_frequency: (v ?? '') as typeof f.sf_frequency }))}>
+                <SelectTrigger><span>{form.sf_frequency ? frequencyLabels[form.sf_frequency] : 'Selecione...'}</span></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5min">A cada 5 minutos</SelectItem>
+                  <SelectItem value="daily">1x por dia (horário)</SelectItem>
+                  <SelectItem value="weekly">1x por semana (dia + horário)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {(form.sf_frequency === 'daily' || form.sf_frequency === 'weekly') && (
+              <div className="space-y-1">
+                <Label>Horário</Label>
+                <Input
+                  type="time"
+                  value={form.sf_run_time}
+                  onChange={e => setForm(f => ({ ...f, sf_run_time: e.target.value }))}
+                  required
+                />
+              </div>
+            )}
+            {form.sf_frequency === 'weekly' && (
+              <div className="space-y-1">
+                <Label>Dia da semana</Label>
+                <Select value={form.sf_run_day} onValueChange={v => setForm(f => ({ ...f, sf_run_day: v ?? '' }))}>
+                  <SelectTrigger><span>{form.sf_run_day !== '' ? dayLabels[form.sf_run_day] : 'Selecione...'}</span></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">Domingo</SelectItem>
+                    <SelectItem value="1">Segunda-feira</SelectItem>
+                    <SelectItem value="2">Terça-feira</SelectItem>
+                    <SelectItem value="3">Quarta-feira</SelectItem>
+                    <SelectItem value="4">Quinta-feira</SelectItem>
+                    <SelectItem value="5">Sexta-feira</SelectItem>
+                    <SelectItem value="6">Sábado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </>
+        )}
+
         <div className="space-y-1 col-span-2">
           <Label>Descrição</Label>
           <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={2} placeholder="Detalhes da regra..." />
@@ -111,7 +225,7 @@ export function RuleForm({ campaignId }: Props) {
       </div>
       <div className="flex gap-2">
         <Button type="submit" size="sm" disabled={loading}>{loading ? 'Salvando...' : 'Salvar regra'}</Button>
-        <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
+        <Button type="button" size="sm" variant="ghost" onClick={() => { setOpen(false); resetForm() }}>Cancelar</Button>
       </div>
     </form>
   )
