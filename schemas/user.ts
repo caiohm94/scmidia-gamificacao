@@ -7,6 +7,7 @@ export const userSchema = z.object({
   team_id: z.string().uuid().nullable(),
   function: z.enum(['internal_seller','external_seller','hunter','manager','auditor']),
   status: z.enum(['active','inactive']),
+  sf_alias: z.string().nullable().optional(),
 })
 
 export type UserInput = z.infer<typeof userSchema>
