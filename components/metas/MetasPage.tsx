@@ -134,9 +134,7 @@ export function MetasPage({ campaigns, rules, participants, initialCampaignId, i
             <RealizadoTab
               ruleId={ruleId}
               campaignId={campaignId}
-              month={month}
               participants={participants}
-              rule={selectedRule!}
             />
           )}
         </>

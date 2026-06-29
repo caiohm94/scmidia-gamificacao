@@ -1,7 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
-import { formatGoalValue, periodDateForDay } from '@/lib/goals/helpers'
 import type { ParticipantGoalRow } from '@/types/database'
 
 type Participant = { id: string; name: string }
@@ -10,9 +9,7 @@ type Rule = { id: string; name: string; points: number; target_period: string | 
 interface Props {
   ruleId: string
   campaignId: string
-  month: string
   participants: Participant[]
-  rule: Rule
 }
 
 function todayDate() {
@@ -20,12 +17,7 @@ function todayDate() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-function formatDisplayDate(date: string) {
-  const [y, m, d] = date.split('-')
-  return `${d}/${m}/${y}`
-}
-
-export function RealizadoTab({ ruleId, campaignId, participants, rule }: Props) {
+export function RealizadoTab({ ruleId, campaignId, participants }: Props) {
   const [selectedDate, setSelectedDate] = useState(todayDate())
   const [goals, setGoals] = useState<ParticipantGoalRow[]>([])
   const [actualInputs, setActualInputs] = useState<Record<string, string>>({})
