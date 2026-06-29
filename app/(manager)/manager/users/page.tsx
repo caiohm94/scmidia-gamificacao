@@ -71,9 +71,16 @@ export default async function UsersPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <Link href={`/manager/users/${u.id}`}>
-                      <button className="sc-btn-outline text-xs cursor-pointer" style={{ padding: '0.25rem 0.75rem', fontSize: '0.75rem' }}>Editar</button>
-                    </Link>
+                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                      {u.role === 'participant' && (
+                        <Link href={`/manager/preview/${u.id}`}>
+                          <button className="sc-btn-outline text-xs cursor-pointer" style={{ padding: '0.25rem 0.75rem', fontSize: '0.75rem', color: '#8DB23C', borderColor: 'rgba(141,178,60,0.4)' }}>Ver painel</button>
+                        </Link>
+                      )}
+                      <Link href={`/manager/users/${u.id}`}>
+                        <button className="sc-btn-outline text-xs cursor-pointer" style={{ padding: '0.25rem 0.75rem', fontSize: '0.75rem' }}>Editar</button>
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}
