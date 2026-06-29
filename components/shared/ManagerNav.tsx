@@ -10,6 +10,7 @@ const navItems = [
   { href: '/manager/salesforce', label: 'Salesforce', icon: CloudDownload },
   { href: '/manager/points/import', label: 'Importar CSV', icon: Upload },
   { href: '/manager/rankings', label: 'Rankings', icon: BarChart3 },
+  { href: '/manager/points/history', label: 'Auditoria', icon: History },
   { href: '/manager/users', label: 'Usuários', icon: Users },
   { href: '/manager/themes', label: 'Temas', icon: Palette },
 ]
