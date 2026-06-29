@@ -207,7 +207,7 @@ export default async function SalesforceImportsPage({ searchParams }: Props) {
                     {logs.map(l => (
                       <tr key={l.id}>
                         <td style={tdStyle}>
-                          {format(new Date(l.triggered_at), 'dd/MM/yy HH:mm:ss', { locale: ptBR })}
+                          {new Date(l.triggered_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                         </td>
                         <td style={{ ...tdStyle, fontWeight: 500 }}>{l.rule_name || dash}</td>
                         <td style={{ ...tdStyle, textAlign: 'center' }}>{l.sf_found}</td>

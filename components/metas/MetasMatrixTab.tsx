@@ -13,6 +13,7 @@ interface Props {
   participants: Participant[]
   valueType: string
   decimalPlaces: number
+  targetPeriod?: string | null
 }
 
 
@@ -32,9 +33,12 @@ const ROW_H = 40
 const BORDER = '1px solid #e2e4e7'
 const BORDER_HEAVY = '2px solid #d0d3d8'
 
-export function MetasMatrixTab({ ruleId, campaignId, month, participants, valueType, decimalPlaces }: Props) {
+export function MetasMatrixTab({ ruleId, campaignId, month, participants, valueType, decimalPlaces, targetPeriod }: Props) {
   const { year, month: m } = parseMonthParam(month)
-  const days = getDaysInMonth(year, m)
+  const isMonthly = targetPeriod === 'monthly'
+  const days = isMonthly ? [1] : getDaysInMonth(year, m)
+  // For monthly rules, period_date is always the 1st of the month
+  const monthlyDate = `${year}-${String(m).padStart(2, '0')}-01`
 
   const [savedValues, setSavedValues] = useState<Record<string, number>>({})
   const [editingKey, setEditingKey] = useState<string | null>(null)
@@ -209,7 +213,17 @@ export function MetasMatrixTab({ ruleId, campaignId, month, participants, valueT
               }}>
                 Participante
               </th>
-              {days.map(d => (
+              {isMonthly ? (
+                <th style={{
+                  minWidth: 120, padding: '0.5rem 0.75rem', textAlign: 'center',
+                  fontFamily: 'var(--font-outfit)', fontWeight: 600, fontSize: '0.7rem',
+                  color: 'rgba(63,62,62,0.5)',
+                  borderBottom: BORDER_HEAVY, borderRight: BORDER,
+                  whiteSpace: 'nowrap',
+                }}>
+                  Meta do Mês
+                </th>
+              ) : days.map(d => (
                 <th key={d} style={{
                   minWidth: 36, padding: '0.5rem 0.25rem', textAlign: 'center',
                   fontFamily: 'var(--font-outfit)', fontWeight: 600, fontSize: '0.7rem',
@@ -248,7 +262,7 @@ export function MetasMatrixTab({ ruleId, campaignId, month, participants, valueT
                   {p.name}
                 </td>
                 {days.map((d, di) => {
-                  const date = periodDateForDay(year, m, d)
+                  const date = isMonthly ? monthlyDate : periodDateForDay(year, m, d)
                   const key = cellKey(p.id, date)
                   const isEditing = editingKey === key
                   const saved = savedValues[key]
@@ -300,11 +314,13 @@ export function MetasMatrixTab({ ruleId, campaignId, month, participants, valueT
                   borderTop: BORDER, borderLeft: BORDER_HEAVY,
                   padding: '0 0.5rem', whiteSpace: 'nowrap', textAlign: 'center', height: ROW_H,
                 }}>
-                  <button onClick={() => handleReplicate(p.id)}
-                    title="Replicar para todos os dias do mês"
-                    style={{ fontSize: '0.67rem', padding: '0.2rem 0.45rem', background: 'rgba(141,178,60,0.12)', color: '#5C7435', border: 'none', borderRadius: '0 0.25rem 0.25rem 0.25rem', cursor: 'pointer', marginRight: '0.3rem' }}>
-                    Replicar
-                  </button>
+                  {!isMonthly && (
+                    <button onClick={() => handleReplicate(p.id)}
+                      title="Replicar para todos os dias do mês"
+                      style={{ fontSize: '0.67rem', padding: '0.2rem 0.45rem', background: 'rgba(141,178,60,0.12)', color: '#5C7435', border: 'none', borderRadius: '0 0.25rem 0.25rem 0.25rem', cursor: 'pointer', marginRight: '0.3rem' }}>
+                      Replicar
+                    </button>
+                  )}
                   <button onClick={() => handleCopyToAll(p.id, p.name)}
                     title="Copiar metas para todos os participantes"
                     style={{ fontSize: '0.67rem', padding: '0.2rem 0.45rem', background: 'rgba(63,62,62,0.07)', color: 'rgba(63,62,62,0.55)', border: 'none', borderRadius: '0 0.25rem 0.25rem 0.25rem', cursor: 'pointer' }}>
