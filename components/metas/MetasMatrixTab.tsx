@@ -12,7 +12,6 @@ interface Props {
   campaignId: string
   month: string
   participants: Participant[]
-  rule: Rule
 }
 
 interface CellEditState {
@@ -21,7 +20,7 @@ interface CellEditState {
   value: string
 }
 
-export function MetasMatrixTab({ ruleId, campaignId, month, participants, rule }: Props) {
+export function MetasMatrixTab({ ruleId, campaignId, month, participants }: Props) {
   const { year, month: m } = parseMonthParam(month)
   const days = getDaysInMonth(year, m)
   const [goals, setGoals] = useState<ParticipantGoalRow[]>([])
@@ -33,6 +32,7 @@ export function MetasMatrixTab({ ruleId, campaignId, month, participants, rule }
     setLoading(true)
     const res = await fetch(`/api/goals?rule_id=${ruleId}&month=${month}`)
     if (res.ok) setGoals(await res.json())
+    else toast.error('Erro ao carregar metas')
     setLoading(false)
   }, [ruleId, month])
 
@@ -44,6 +44,7 @@ export function MetasMatrixTab({ ruleId, campaignId, month, participants, rule }
   }
 
   async function saveCell(userId: string, day: number, value: string) {
+    if (saving) return
     const numVal = parseFloat(value.replace(',', '.'))
     if (isNaN(numVal) || numVal < 0) { setEditing(null); return }
     const date = periodDateForDay(year, m, day)

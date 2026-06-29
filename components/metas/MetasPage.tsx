@@ -128,7 +128,6 @@ export function MetasPage({ campaigns, rules, participants, initialCampaignId, i
               campaignId={campaignId}
               month={month}
               participants={participants}
-              rule={selectedRule!}
             />
           )}
           {tab === 'realizado' && (
