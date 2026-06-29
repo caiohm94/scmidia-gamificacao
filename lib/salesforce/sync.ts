@@ -48,13 +48,21 @@ export async function syncRule(ruleId: string, triggeredBy: string): Promise<Syn
 
   const { data: participants } = await admin
     .from('campaign_participants')
-    .select('user_id, users!user_id(sf_alias)')
+    .select('user_id')
     .eq('campaign_id', rule.campaign_id)
 
-  type ParticipantRow = { user_id: string; users: { sf_alias: string | null } | null }
-  const participantList = (participants ?? []) as unknown as ParticipantRow[]
+  const userIds = (participants ?? []).map(p => p.user_id)
 
-  const userIds = participantList.map(p => p.user_id)
+  const { data: usersData } = await admin
+    .from('users')
+    .select('id, sf_alias')
+    .in('id', userIds)
+
+  type ParticipantRow = { user_id: string; sf_alias: string | null }
+  const participantList: ParticipantRow[] = (participants ?? []).map(p => ({
+    user_id: p.user_id,
+    sf_alias: usersData?.find(u => u.id === p.user_id)?.sf_alias ?? null,
+  }))
   const { data: syncStates } = await admin
     .from('salesforce_sync_state')
     .select('user_id, last_value')
@@ -72,7 +80,7 @@ export async function syncRule(ruleId: string, triggeredBy: string): Promise<Syn
     if (!alias) { result.skipped++; continue }
 
     const currentValue = Number(getField(sfRow, valueField) ?? 0)
-    const participant = participantList.find(p => p.users?.sf_alias === alias)
+    const participant = participantList.find(p => p.sf_alias === alias)
     if (!participant) { result.skipped++; continue }
 
     const lastValue = stateMap.get(participant.user_id) ?? 0
