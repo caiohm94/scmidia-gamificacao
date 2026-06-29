@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { requireRole } from '@/lib/auth/helpers'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -20,7 +20,7 @@ type RecordRow = {
 
 export default async function SalesforceImportsPage() {
   await requireRole('manager')
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const { data: recordsRaw } = await supabase
     .from('salesforce_records')
