@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
-export const salesforceRuleFieldsSchema = z.object({
+// Campos base — usado para .extend() e .partial() nas APIs
+export const salesforceRuleFields = z.object({
   data_origin: z.enum(['manual', 'salesforce']).default('manual'),
   sf_soql: z.string().min(10, 'SOQL muito curta').nullable().optional(),
   sf_value_field: z.string().min(1).nullable().optional(),
@@ -8,7 +9,10 @@ export const salesforceRuleFieldsSchema = z.object({
   sf_frequency: z.enum(['5min', 'daily', 'weekly']).nullable().optional(),
   sf_run_time: z.string().regex(/^\d{2}:\d{2}$/).nullable().optional(),
   sf_run_day: z.number().int().min(0).max(6).nullable().optional(),
-}).superRefine((data, ctx) => {
+})
+
+// Schema completo com validação condicional — usado para criar regras
+export const salesforceRuleFieldsSchema = salesforceRuleFields.superRefine((data, ctx) => {
   if (data.data_origin === 'salesforce') {
     if (!data.sf_soql) ctx.addIssue({ code: 'custom', path: ['sf_soql'], message: 'SOQL obrigatória quando origem é Salesforce' })
     if (!data.sf_value_field) ctx.addIssue({ code: 'custom', path: ['sf_value_field'], message: 'Campo de valor obrigatório' })
