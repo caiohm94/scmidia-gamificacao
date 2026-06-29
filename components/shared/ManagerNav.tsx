@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Trophy, Users, Target, History, Upload, BarChart3, Palette } from 'lucide-react'
+import { LayoutDashboard, Trophy, Users, Target, History, Upload, BarChart3, Palette, CloudDownload } from 'lucide-react'
 
 const navItems = [
   { href: '/manager/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -12,6 +12,7 @@ const navItems = [
   { href: '/manager/points/history', label: 'Auditoria', icon: History },
   { href: '/manager/rankings', label: 'Rankings', icon: BarChart3 },
   { href: '/manager/themes', label: 'Temas', icon: Palette },
+  { href: '/manager/salesforce', label: 'Salesforce', icon: CloudDownload },
 ]
 
 interface Props { collapsed?: boolean }
