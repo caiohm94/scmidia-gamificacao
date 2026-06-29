@@ -9,6 +9,7 @@ export interface Database {
       users: { Row: UserRow; Insert: Partial<UserRow>; Update: Partial<UserRow>; Relationships: [] }
       salesforce_sync_state: { Row: SalesforceSyncStateRow; Insert: Partial<SalesforceSyncStateRow>; Update: Partial<SalesforceSyncStateRow>; Relationships: [] }
       salesforce_records: { Row: SalesforceRecordRow; Insert: Partial<SalesforceRecordRow>; Update: Partial<SalesforceRecordRow>; Relationships: [] }
+      participant_goals: { Row: ParticipantGoalRow; Insert: Partial<ParticipantGoalRow>; Update: Partial<ParticipantGoalRow>; Relationships: [] }
       platform_themes: { Row: PlatformThemeRow; Insert: Partial<PlatformThemeRow>; Update: Partial<PlatformThemeRow>; Relationships: [] }
       campaigns: { Row: CampaignRow; Insert: Partial<CampaignRow>; Update: Partial<CampaignRow>; Relationships: [] }
       campaign_participants: { Row: CampaignParticipantRow; Insert: Partial<CampaignParticipantRow>; Update: Partial<CampaignParticipantRow>; Relationships: [] }
@@ -36,7 +37,7 @@ export interface Database {
       rule_applies_to: 'all' | 'internal_seller' | 'external_seller' | 'hunter'
       rule_category: 'goal' | 'activity' | 'behavior' | 'bonus' | 'penalty'
       rule_period: 'daily' | 'weekly' | 'monthly'
-      transaction_origin: 'manual' | 'salesforce' | 'sap'
+      transaction_origin: 'manual' | 'salesforce' | 'sap' | 'meta'
       transaction_status: 'active' | 'reversed'
       audit_action: 'created' | 'edited' | 'reversed'
       bonus_trigger: 'manual' | 'automatic'
@@ -87,7 +88,7 @@ type ScoringRuleExceptionRow = {
 type PointTransactionRow = {
   id: string; campaign_id: string; user_id: string; scoring_rule_id: string | null
   points: number; event_date: string; description: string | null; attachment_url: string | null
-  origin: 'manual' | 'salesforce' | 'sap'; status: 'active' | 'reversed'
+  origin: 'manual' | 'salesforce' | 'sap' | 'meta'; status: 'active' | 'reversed'
   import_batch_id: string | null; created_by: string; created_at: string
 }
 type PointAuditLogRow = {
@@ -139,6 +140,19 @@ export type SalesforceRecordRow = {
   description: string | null
   user_id: string | null
   transaction_id: string | null
+}
+export type ParticipantGoalRow = {
+  id: string
+  scoring_rule_id: string
+  campaign_id: string
+  user_id: string
+  period_date: string
+  target_value: number
+  actual_value: number | null
+  points_awarded: boolean
+  awarded_tx_id: string | null
+  created_at: string
+  updated_at: string
 }
 export type PlatformThemeRow = {
   id: string
