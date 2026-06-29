@@ -22,6 +22,16 @@ async function getFirstManagerId(): Promise<string | null> {
   return data?.id ?? null
 }
 
+export async function GET(request: NextRequest) {
+  if (!isCronAuthorized(request)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  const triggeredBy = await getFirstManagerId()
+  if (!triggeredBy) return NextResponse.json({ error: 'No active manager found' }, { status: 500 })
+  const results = await syncAllDueRules(triggeredBy)
+  return NextResponse.json({ results })
+}
+
 export async function POST(request: NextRequest) {
   let triggeredBy: string | null = null
 
