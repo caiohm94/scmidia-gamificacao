@@ -127,7 +127,7 @@ export default async function ParticipantDashboard() {
         display: 'flex', alignItems: 'stretch', minHeight: 160,
       }}>
         {/* Photo column */}
-        <div style={{ width: 140, flexShrink: 0, position: 'relative', overflow: 'hidden' }}>
+        <div style={{ width: 200, flexShrink: 0, position: 'relative', overflow: 'hidden' }}>
           {participantPhoto ? (
             <img
               src={participantPhoto}

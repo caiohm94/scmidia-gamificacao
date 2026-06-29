@@ -27,6 +27,7 @@ interface Props {
 
 export function MetasCalendar({ days, goals, year, month, today, rule, is_cumulative }: Props) {
   const [selectedDay, setSelectedDay] = useState<number | null>(null)
+  const [hoveredDay, setHoveredDay] = useState<number | null>(null)
 
   const muted = 'var(--p-muted)'
   const cardBorder = 'var(--p-card-border)'
@@ -87,7 +88,7 @@ export function MetasCalendar({ days, goals, year, month, today, rule, is_cumula
 
   const svgW = days.length * 14
   const barAreaH = 52
-  const labelH = 18
+  const labelH = 26
   const svgH = barAreaH + labelH
 
   return (
@@ -249,7 +250,14 @@ export function MetasCalendar({ days, goals, year, month, today, rule, is_cumula
                       const barY = labelH + barAreaH - barH
                       const label = formatValueCompact(val, vt, dp)
                       return (
-                        <g key={d}>
+                        <g
+                          key={d}
+                          onMouseEnter={() => setHoveredDay(d)}
+                          onMouseLeave={() => setHoveredDay(null)}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          {/* Wider invisible hit area */}
+                          <rect x={barX - 1} y={labelH} width={13} height={barAreaH} fill="transparent" />
                           <rect
                             x={barX}
                             y={barY}
@@ -257,15 +265,15 @@ export function MetasCalendar({ days, goals, year, month, today, rule, is_cumula
                             height={barH}
                             rx={2}
                             fill={isThisDay ? '#FFDF00' : barColor}
-                            opacity={isThisDay ? 1 : 0.6}
+                            opacity={isThisDay ? 1 : hoveredDay === d ? 1 : 0.6}
                           />
                           <text
                             x={barX + 5.5}
-                            y={labelH - 2}
+                            y={labelH - 4}
                             textAnchor="middle"
-                            fontSize={6}
+                            fontSize={9}
                             fill={isThisDay ? '#FFDF00' : barColor}
-                            opacity={isThisDay ? 1 : 0.7}
+                            opacity={isThisDay ? 1 : 0.8}
                             fontFamily="var(--font-outfit, sans-serif)"
                             fontWeight={isThisDay ? 700 : 500}
                           >
@@ -276,6 +284,28 @@ export function MetasCalendar({ days, goals, year, month, today, rule, is_cumula
                     })}
                     {/* 100% reference line */}
                     <line x1={0} y1={labelH + 2} x2={svgW} y2={labelH + 2} stroke="var(--p-track)" strokeWidth={1} strokeDasharray="3 3" />
+
+                    {/* Hover tooltip */}
+                    {hoveredDay !== null && (() => {
+                      const hi = days.indexOf(hoveredDay)
+                      const hEntry = sparkData[hi]
+                      const hGoal = goalForDay(hoveredDay)
+                      if (!hEntry || !hGoal) return null
+                      const cx = hi * 14 + 7
+                      const tw = 96
+                      const tx = Math.max(2, Math.min(cx - tw / 2, svgW - tw - 2))
+                      return (
+                        <g>
+                          <rect x={tx} y={labelH + 6} width={tw} height={32} rx={4} fill="rgba(13,26,15,0.92)" />
+                          <text x={tx + 7} y={labelH + 20} fontSize={8.5} fill="#8DB23C" fontFamily="sans-serif" fontWeight={700}>
+                            ✓ {formatValueCompact(hEntry.val, vt, dp)}
+                          </text>
+                          <text x={tx + 7} y={labelH + 32} fontSize={8.5} fill="rgba(255,255,255,0.6)" fontFamily="sans-serif">
+                            □ {formatValueCompact(hGoal.target_value, vt, dp)}
+                          </text>
+                        </g>
+                      )
+                    })()}
                   </svg>
                 </div>
               )}

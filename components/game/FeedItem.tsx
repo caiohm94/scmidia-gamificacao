@@ -22,26 +22,34 @@ interface FeedEvent {
 export function FeedItem({ event }: { event: FeedEvent }) {
   const payload = event.payload as any
   return (
-    <div className="flex items-start gap-3 p-3 rounded-lg bg-gray-900 border border-gray-800">
-      <div className="text-2xl mt-0.5">
+    <div style={{
+      display: 'flex', alignItems: 'flex-start', gap: '0.75rem',
+      padding: '0.75rem 1rem',
+      borderRadius: '0 0.5rem 0.5rem 0.5rem',
+      background: 'var(--p-card-bg)',
+      border: '1px solid var(--p-card-border)',
+    }}>
+      <div style={{ fontSize: '1.3rem', marginTop: 2, flexShrink: 0 }}>
         {event.event_type === 'point_earned' ? '⚽' :
          event.event_type === 'level_up' ? '🏅' :
          event.event_type === 'bonus_earned' ? '⭐' :
          event.event_type === 'streak_milestone' ? '🔥' : '📢'}
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm text-white">
-          <span className="font-semibold">{payload.user_name}</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: '0.85rem', color: 'var(--p-text)', margin: 0 }}>
+          <span style={{ fontWeight: 600 }}>{payload.user_name}</span>
           {' '}{eventLabels[event.event_type] ?? event.event_type}
           {event.event_type === 'point_earned' && payload.points && (
-            <span className="ml-1 text-yellow-400 font-bold">+{payload.points} pts</span>
+            <span style={{ marginLeft: '0.25rem', color: '#FFDF00', fontWeight: 700 }}>+{payload.points} pts</span>
           )}
         </p>
         {payload.rule_name && (
-          <p className="text-xs text-gray-400 mt-0.5">{payload.rule_name}</p>
+          <p style={{ fontSize: '0.72rem', color: 'var(--p-muted)', marginTop: '0.2rem', margin: '0.2rem 0 0' }}>
+            {payload.rule_name}
+          </p>
         )}
       </div>
-      <span className="text-xs text-gray-500 whitespace-nowrap">
+      <span style={{ fontSize: '0.7rem', color: 'var(--p-muted)', whiteSpace: 'nowrap', flexShrink: 0 }}>
         {formatDistanceToNow(new Date(event.created_at), { locale: ptBR, addSuffix: true })}
       </span>
     </div>

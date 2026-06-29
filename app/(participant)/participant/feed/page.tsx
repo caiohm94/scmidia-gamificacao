@@ -34,7 +34,7 @@ export default function FeedPage() {
     })
   }, [])
 
-  const muted = 'rgba(255,255,255,0.35)'
+  const muted = 'var(--p-muted)'
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>

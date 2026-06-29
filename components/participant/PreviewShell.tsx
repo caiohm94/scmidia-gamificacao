@@ -21,9 +21,11 @@ export function PreviewShell({ children }: { children: React.ReactNode }) {
 
   const t = THEMES[theme]
   const vars = mounted ? (t.vars as React.CSSProperties) : (THEMES.padrao.vars as React.CSSProperties)
+  const cssVars = Object.entries(mounted ? t.vars : THEMES.padrao.vars).map(([k, v]) => `${k}:${v}`).join(';')
 
   return (
     <div style={{ minHeight: '100vh', background: mounted ? t.bg : THEMES.padrao.bg, color: 'var(--p-text)', transition: 'background 0.3s', ...vars }}>
+      <style suppressHydrationWarning>{`:root{${cssVars}}`}</style>
       {/* Floating theme toggle — bottom-right */}
       <div style={{
         position: 'fixed', bottom: '1.25rem', right: '1.25rem', zIndex: 200,

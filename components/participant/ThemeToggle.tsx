@@ -51,9 +51,12 @@ export function ThemeWrapper({ children, headerContent }: { children: React.Reac
   }
 
   const t = THEMES[theme]
+  const cssVars = Object.entries(t.vars).map(([k, v]) => `${k}:${v}`).join(';')
 
   return (
     <div style={{ minHeight: '100vh', background: t.bg, color: 'var(--p-text)', transition: 'background 0.3s', ...(t.vars as React.CSSProperties) }}>
+      {/* Inject vars at :root so server-rendered children see them immediately */}
+      <style suppressHydrationWarning>{`:root{${cssVars}}`}</style>
       <header style={{ borderBottom: '1px solid var(--p-sub-border)', padding: '0 1.5rem', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 50, background: t.headerBg, backdropFilter: 'blur(8px)', transition: 'background 0.3s' }}>
         {headerContent}
       </header>

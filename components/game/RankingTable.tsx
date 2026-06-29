@@ -46,13 +46,13 @@ export function RankingTable({ rows, highlightUserId }: Props) {
                 boxShadow: `0 4px 20px ${medal.shadow}`,
                 display: 'flex', flexDirection: 'column',
               }}>
-                {/* Full-bleed photo */}
-                <div style={{ position: 'relative', width: '100%', height: 220, overflow: 'hidden', flexShrink: 0 }}>
+                {/* Full photo — no crop */}
+                <div style={{ position: 'relative', width: '100%', flexShrink: 0 }}>
                   {row.avatar_url ? (
                     <img
                       src={row.avatar_url}
                       alt={row.name ?? ''}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top', display: 'block' }}
+                      style={{ width: '100%', height: 'auto', display: 'block' }}
                     />
                   ) : (
                     <div style={{ width: '100%', height: '100%', background: 'rgba(141,178,60,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '4rem', fontWeight: 800, color: '#8DB23C', fontFamily: 'var(--font-outfit)' }}>
