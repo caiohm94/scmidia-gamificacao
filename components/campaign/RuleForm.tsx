@@ -143,17 +143,19 @@ export function RuleForm({ campaignId }: Props) {
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-1">
-          <Label>Período</Label>
-          <Select value={form.target_period} onValueChange={v => setForm(f => ({ ...f, target_period: v ?? '' }))}>
-            <SelectTrigger><span>{form.target_period ? periodLabels[form.target_period] : 'Opcional'}</span></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="daily">Diário</SelectItem>
-              <SelectItem value="weekly">Semanal</SelectItem>
-              <SelectItem value="monthly">Mensal</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        {form.category === 'goal' && (
+          <div className="space-y-1">
+            <Label>Período</Label>
+            <Select value={form.target_period} onValueChange={v => setForm(f => ({ ...f, target_period: v ?? '' }))}>
+              <SelectTrigger><span>{form.target_period ? periodLabels[form.target_period] : 'Opcional'}</span></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="daily">Diário</SelectItem>
+                <SelectItem value="weekly">Semanal</SelectItem>
+                <SelectItem value="monthly">Mensal</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         {/* Origem dos dados */}
         <div className="space-y-1 col-span-2">

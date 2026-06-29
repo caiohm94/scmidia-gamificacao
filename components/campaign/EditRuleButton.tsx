@@ -166,7 +166,7 @@ export function EditRuleButton({ campaignId, rule }: Props) {
           </div>
 
           {/* Aplica-se a + Período */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: form.category === 'goal' ? '1fr 1fr' : '1fr', gap: '0.75rem' }}>
             <div>
               <label style={labelStyle}>Aplica-se a</label>
               <select value={form.applies_to} onChange={e => setForm(f => ({ ...f, applies_to: e.target.value }))} style={{ ...inputStyle, cursor: 'pointer' }}>
@@ -176,15 +176,17 @@ export function EditRuleButton({ campaignId, rule }: Props) {
                 <option value="hunter">Hunter</option>
               </select>
             </div>
-            <div>
-              <label style={labelStyle}>Período</label>
-              <select value={form.target_period} onChange={e => setForm(f => ({ ...f, target_period: e.target.value }))} style={{ ...inputStyle, cursor: 'pointer' }}>
-                <option value="">Nenhum</option>
-                <option value="daily">Diário</option>
-                <option value="weekly">Semanal</option>
-                <option value="monthly">Mensal</option>
-              </select>
-            </div>
+            {form.category === 'goal' && (
+              <div>
+                <label style={labelStyle}>Período</label>
+                <select value={form.target_period} onChange={e => setForm(f => ({ ...f, target_period: e.target.value }))} style={{ ...inputStyle, cursor: 'pointer' }}>
+                  <option value="">Nenhum</option>
+                  <option value="daily">Diário</option>
+                  <option value="weekly">Semanal</option>
+                  <option value="monthly">Mensal</option>
+                </select>
+              </div>
+            )}
           </div>
 
           {/* Descrição */}
