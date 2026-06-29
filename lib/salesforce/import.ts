@@ -24,6 +24,24 @@ export async function importRule(ruleId: string, triggeredBy: string): Promise<I
   const admin = createAdminClient()
   const result: ImportResult = { rule_id: ruleId, rule_name: '', inserted: 0, skipped: 0, errors: [] }
 
+  async function writeLog(sfFound: number) {
+    const status = result.errors.length > 0 && result.inserted === 0 ? 'error'
+      : result.errors.length > 0 ? 'partial'
+      : result.inserted > 0 ? 'success'
+      : 'no_match'
+    const { error: logErr } = await admin.from('salesforce_sync_logs').insert({
+      rule_id: ruleId,
+      rule_name: result.rule_name || ruleId,
+      triggered_by: triggeredBy,
+      sf_found: sfFound,
+      inserted: result.inserted,
+      skipped: result.skipped,
+      errors: result.errors,
+      status,
+    })
+    if (logErr) console.error('[SF import] log insert failed', logErr.message)
+  }
+
   const { data: rule, error: ruleErr } = await admin
     .from('scoring_rules')
     .select('id, name, points, campaign_id, sf_soql, sf_alias_field')
@@ -34,6 +52,7 @@ export async function importRule(ruleId: string, triggeredBy: string): Promise<I
 
   if (ruleErr || !rule) {
     result.errors.push(`Regra não encontrada ou inativa: ${ruleId}`)
+    await writeLog(0)
     return result
   }
 
@@ -46,6 +65,7 @@ export async function importRule(ruleId: string, triggeredBy: string): Promise<I
     sfRows = await executeSoql(conn, rule.sf_soql!)
   } catch (err) {
     result.errors.push(`Erro SOQL: ${err instanceof Error ? err.message : String(err)}`)
+    await writeLog(0)
     return result
   }
 
@@ -146,21 +166,6 @@ export async function importRule(ruleId: string, triggeredBy: string): Promise<I
     else result.skipped++
   }
 
-  const status = result.errors.length > 0 && result.inserted === 0 ? 'error'
-    : result.errors.length > 0 ? 'partial'
-    : result.inserted > 0 ? 'success'
-    : 'no_match'
-
-  await admin.from('salesforce_sync_logs').insert({
-    rule_id: ruleId,
-    rule_name: result.rule_name,
-    triggered_by: triggeredBy,
-    sf_found: sfRows.length,
-    inserted: result.inserted,
-    skipped: result.skipped,
-    errors: result.errors,
-    status,
-  })
-
+  await writeLog(sfRows.length)
   return result
 }
