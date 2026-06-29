@@ -30,8 +30,7 @@ export function RuleForm({ campaignId }: Props) {
     target_period: '',
     data_origin: 'manual' as 'manual' | 'salesforce',
     sf_soql: '',
-    sf_value_field: '',
-    sf_alias_field: 'Alias',
+    sf_alias_field: 'Owner.Alias',
     sf_frequency: '' as '5min' | 'daily' | 'weekly' | '',
     sf_run_time: '',
     sf_run_day: '',
@@ -41,7 +40,7 @@ export function RuleForm({ campaignId }: Props) {
     setForm({
       name: '', description: '', points: '', category: 'goal', applies_to: 'all',
       target_value: '', target_period: '',
-      data_origin: 'manual', sf_soql: '', sf_value_field: '', sf_alias_field: 'Alias',
+      data_origin: 'manual', sf_soql: '', sf_alias_field: 'Owner.Alias',
       sf_frequency: '', sf_run_time: '', sf_run_day: '',
     })
   }
@@ -60,8 +59,7 @@ export function RuleForm({ campaignId }: Props) {
       target_period: form.target_period || undefined,
       data_origin: form.data_origin,
       sf_soql: isSf ? form.sf_soql || undefined : undefined,
-      sf_value_field: isSf ? form.sf_value_field || undefined : undefined,
-      sf_alias_field: isSf ? (form.sf_alias_field || 'Alias') : undefined,
+      sf_alias_field: isSf ? (form.sf_alias_field || 'Owner.Alias') : undefined,
       sf_frequency: isSf ? form.sf_frequency || undefined : undefined,
       sf_run_time: isSf && form.sf_run_time ? form.sf_run_time : undefined,
       sf_run_day: isSf && form.sf_run_day !== '' ? parseInt(form.sf_run_day) : undefined,
@@ -151,30 +149,21 @@ export function RuleForm({ campaignId }: Props) {
               <Textarea
                 value={form.sf_soql}
                 onChange={e => setForm(f => ({ ...f, sf_soql: e.target.value }))}
-                rows={3}
-                placeholder="SELECT Alias, SUM(Amount) total FROM Opportunity WHERE StageName='Closed Won' AND CALENDAR_MONTH(CloseDate) = CALENDAR_MONTH(TODAY) GROUP BY Alias"
+                rows={4}
+                placeholder={`SELECT Id, Owner.Name, Owner.Alias, Account.Name, Description, CreatedDate\nFROM Task\nWHERE Subject = 'Chamada'`}
                 className="font-mono text-xs"
                 required
               />
-              <p className="text-xs text-muted-foreground">A query deve retornar uma coluna de alias e uma coluna de valor numérico por usuário.</p>
-            </div>
-            <div className="space-y-1">
-              <Label>Campo do valor *</Label>
-              <Input
-                value={form.sf_value_field}
-                onChange={e => setForm(f => ({ ...f, sf_value_field: e.target.value }))}
-                placeholder="total"
-                required
-              />
-              <p className="text-xs text-muted-foreground">Nome exato da coluna com o valor numérico.</p>
+              <p className="text-xs text-muted-foreground">A query deve retornar registros individuais com: Id, Owner.Alias (para match), e opcionalmente Owner.Name, Account.Name, Description, CreatedDate.</p>
             </div>
             <div className="space-y-1">
               <Label>Campo do alias</Label>
               <Input
                 value={form.sf_alias_field}
                 onChange={e => setForm(f => ({ ...f, sf_alias_field: e.target.value }))}
-                placeholder="Alias"
+                placeholder="Owner.Alias"
               />
+              <p className="text-xs text-muted-foreground">Campo da SOQL que contém o alias do usuário no Salesforce.</p>
             </div>
             <div className="space-y-1 col-span-2">
               <Label>Frequência de sincronização *</Label>

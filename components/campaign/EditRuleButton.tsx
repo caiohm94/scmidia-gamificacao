@@ -39,8 +39,7 @@ export function EditRuleButton({ campaignId, rule }: Props) {
     category: rule.category ?? 'goal',
     data_origin: rule.data_origin ?? 'manual',
     sf_soql: rule.sf_soql ?? '',
-    sf_value_field: rule.sf_value_field ?? '',
-    sf_alias_field: rule.sf_alias_field ?? 'Alias',
+    sf_alias_field: rule.sf_alias_field ?? 'Owner.Alias',
     sf_frequency: rule.sf_frequency ?? '',
     sf_run_time: rule.sf_run_time ?? '',
     sf_run_day: rule.sf_run_day != null ? String(rule.sf_run_day) : '',
@@ -72,14 +71,12 @@ export function EditRuleButton({ campaignId, rule }: Props) {
     }
     if (isSF) {
       payload.sf_soql = form.sf_soql || null
-      payload.sf_value_field = form.sf_value_field || null
-      payload.sf_alias_field = form.sf_alias_field || 'Alias'
+      payload.sf_alias_field = form.sf_alias_field || 'Owner.Alias'
       payload.sf_frequency = form.sf_frequency || null
       payload.sf_run_time = form.sf_run_time || null
       payload.sf_run_day = form.sf_run_day !== '' ? parseInt(form.sf_run_day) : null
     } else {
       payload.sf_soql = null
-      payload.sf_value_field = null
       payload.sf_frequency = null
       payload.sf_run_time = null
       payload.sf_run_day = null
@@ -189,22 +186,16 @@ export function EditRuleButton({ campaignId, rule }: Props) {
                   value={form.sf_soql}
                   onChange={e => setForm(f => ({ ...f, sf_soql: e.target.value }))}
                   rows={4}
-                  placeholder="SELECT Owner.Alias, COUNT(Id) total FROM Task WHERE ... GROUP BY Owner.Alias"
+                  placeholder={`SELECT Id, Owner.Name, Owner.Alias, Account.Name, Description, CreatedDate\nFROM Task\nWHERE Subject = 'Chamada'`}
                   style={{ ...inputStyle, resize: 'vertical', fontFamily: 'monospace', fontSize: '0.78rem' }}
                 />
-                <p style={{ fontSize: '0.7rem', color: 'rgba(63,62,62,0.45)', marginTop: '0.2rem' }}>A query deve retornar uma coluna de alias e uma coluna de valor numérico por usuário.</p>
+                <p style={{ fontSize: '0.7rem', color: 'rgba(63,62,62,0.45)', marginTop: '0.2rem' }}>A query deve retornar registros individuais com: Id, Owner.Alias (para match), e opcionalmente Owner.Name, Account.Name, Description, CreatedDate.</p>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                <div>
-                  <label style={labelStyle}>Campo do valor *</label>
-                  <input value={form.sf_value_field} onChange={e => setForm(f => ({ ...f, sf_value_field: e.target.value }))} placeholder="ex: total" style={inputStyle} />
-                  <p style={{ fontSize: '0.7rem', color: 'rgba(63,62,62,0.45)', marginTop: '0.2rem' }}>Nome exato da coluna com o valor numérico.</p>
-                </div>
-                <div>
-                  <label style={labelStyle}>Campo do alias</label>
-                  <input value={form.sf_alias_field} onChange={e => setForm(f => ({ ...f, sf_alias_field: e.target.value }))} placeholder="ex: Owner.Alias" style={inputStyle} />
-                </div>
+              <div>
+                <label style={labelStyle}>Campo do alias</label>
+                <input value={form.sf_alias_field} onChange={e => setForm(f => ({ ...f, sf_alias_field: e.target.value }))} placeholder="ex: Owner.Alias" style={inputStyle} />
+                <p style={{ fontSize: '0.7rem', color: 'rgba(63,62,62,0.45)', marginTop: '0.2rem' }}>Campo da SOQL que contém o alias do usuário no Salesforce.</p>
               </div>
 
               <div>
