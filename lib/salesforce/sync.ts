@@ -78,16 +78,23 @@ export async function syncRule(ruleId: string, triggeredBy: string): Promise<Syn
 
   const today = new Date().toISOString().slice(0, 10)
 
+  console.log('[sync] sfRows count:', sfRows.length)
+  console.log('[sync] participantList:', JSON.stringify(participantList))
+  console.log('[sync] aliasField:', aliasField, '| valueField:', valueField)
+  if (sfRows.length > 0) console.log('[sync] first sfRow keys:', Object.keys(sfRows[0]))
+
   for (const sfRow of sfRows) {
     const alias = String(getField(sfRow, aliasField) ?? '').trim()
-    if (!alias) { result.skipped++; continue }
+    if (!alias) { console.log('[sync] skip: alias vazio'); result.skipped++; continue }
 
     const currentValue = Number(getField(sfRow, valueField) ?? 0)
     const participant = participantList.find(p => p.sf_alias === alias)
+    console.log(`[sync] alias="${alias}" currentValue=${currentValue} participantFound=${!!participant}`)
     if (!participant) { result.skipped++; continue }
 
     const lastValue = stateMap.get(participant.user_id) ?? 0
     const delta = currentValue - lastValue
+    console.log(`[sync] lastValue=${lastValue} delta=${delta}`)
 
     if (delta <= 0) { result.skipped++; continue }
 
