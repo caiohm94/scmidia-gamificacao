@@ -8,6 +8,7 @@ export interface Database {
     Tables: {
       users: { Row: UserRow; Insert: Partial<UserRow>; Update: Partial<UserRow>; Relationships: [] }
       salesforce_sync_state: { Row: SalesforceSyncStateRow; Insert: Partial<SalesforceSyncStateRow>; Update: Partial<SalesforceSyncStateRow>; Relationships: [] }
+      platform_themes: { Row: PlatformThemeRow; Insert: Partial<PlatformThemeRow>; Update: Partial<PlatformThemeRow>; Relationships: [] }
       campaigns: { Row: CampaignRow; Insert: Partial<CampaignRow>; Update: Partial<CampaignRow>; Relationships: [] }
       campaign_participants: { Row: CampaignParticipantRow; Insert: Partial<CampaignParticipantRow>; Update: Partial<CampaignParticipantRow>; Relationships: [] }
       teams: { Row: TeamRow; Insert: Partial<TeamRow>; Update: Partial<TeamRow>; Relationships: [] }
@@ -123,6 +124,16 @@ type NotificationRow = {
 export type SalesforceSyncStateRow = {
   scoring_rule_id: string; user_id: string
   last_value: number; last_synced_at: string
+}
+export type PlatformThemeRow = {
+  id: string
+  name: string
+  subtitle: string
+  bg_gradient: string
+  primary_color: string
+  accent_color: string
+  is_active: boolean
+  created_at: string
 }
 
 type CampaignRankingRow = {
