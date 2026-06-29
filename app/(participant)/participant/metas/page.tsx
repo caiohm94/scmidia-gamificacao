@@ -42,9 +42,9 @@ export default async function MetasPage() {
     byRule.set(g.scoring_rule_id, arr)
   }
 
-  const cardBg = 'var(--p-card-bg)'
-  const cardBorder = 'var(--p-card-border)'
-  const muted = 'var(--p-muted)'
+  const cardBg = 'var(--p-card-bg, rgba(0,0,0,0.035))'
+  const cardBorder = 'var(--p-card-border, rgba(0,0,0,0.1))'
+  const muted = 'var(--p-muted, #6b7d6c)'
   const days = getDaysInMonth(y, m)
 
   return (

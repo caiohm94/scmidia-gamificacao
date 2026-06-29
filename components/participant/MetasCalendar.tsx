@@ -69,27 +69,23 @@ export function MetasCalendar({ days, goals, year, month, today, rule, is_cumula
     && selectedGoal.actual_value != null
     && selectedGoal.actual_value >= selectedGoal.target_value
 
-  // Month totals for cumulative
+  // Month totals for cumulative — target is up to today, not full month
   const monthTotalActual = goals.reduce((s, g) => s + (g.actual_value ?? 0), 0)
-  const monthTotalTarget = goals.reduce((s, g) => s + g.target_value, 0)
-  const monthPct = monthTotalTarget > 0 ? Math.min((monthTotalActual / monthTotalTarget) * 100, 100) : 0
-  const monthAchieved = monthTotalActual >= monthTotalTarget && monthTotalTarget > 0
+  const monthTargetUntilToday = goals.filter(g => g.period_date <= today).reduce((s, g) => s + g.target_value, 0)
+  const monthPct = monthTargetUntilToday > 0 ? Math.min((monthTotalActual / monthTargetUntilToday) * 100, 100) : 0
+  const monthAchieved = monthTotalActual >= monthTargetUntilToday && monthTargetUntilToday > 0
 
-  // Sparkline data
+  // Bar chart data
   const sparkData = days.map(d => {
     const g = goalForDay(d)
     if (!g || g.actual_value == null || g.target_value === 0) return null
     return {
       pct: Math.min((g.actual_value / g.target_value) * 100, 120),
       val: g.actual_value,
+      target: g.target_value,
     }
   })
   const hasSparkData = sparkData.some(v => v !== null)
-
-  const svgW = days.length * 14
-  const barAreaH = 52
-  const labelH = 26
-  const svgH = barAreaH + labelH
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -208,9 +204,9 @@ export function MetasCalendar({ days, goals, year, month, today, rule, is_cumula
                     </div>
                     <div style={{ background: 'var(--p-card-bg)', border: `1px solid ${cardBorder}`, borderRadius: '0 0.5rem 0.5rem 0.5rem', padding: '0.6rem' }}>
                       <p style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, fontFamily: 'var(--font-outfit)', color: 'var(--p-text-dim)' }}>
-                        {formatValueCompact(monthTotalTarget, vt, dp)}
+                        {formatValueCompact(monthTargetUntilToday, vt, dp)}
                       </p>
-                      <p style={{ margin: 0, fontSize: '0.65rem', color: muted }}>orçado</p>
+                      <p style={{ margin: 0, fontSize: '0.65rem', color: muted }}>orçado até hoje</p>
                     </div>
                     <div style={{ background: monthAchieved ? 'rgba(141,178,60,0.1)' : 'rgba(249,115,22,0.08)', borderRadius: '0 0.5rem 0.5rem 0.5rem', padding: '0.6rem', border: `1px solid ${monthAchieved ? 'rgba(141,178,60,0.25)' : 'rgba(249,115,22,0.2)'}` }}>
                       <p style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, fontFamily: 'var(--font-outfit)', color: monthAchieved ? '#8DB23C' : '#f97316' }}>
@@ -222,9 +218,9 @@ export function MetasCalendar({ days, goals, year, month, today, rule, is_cumula
                 </>
               )}
 
-              {/* Progress bar */}
+              {/* Progress bar — for cumulative shows month progress up to today */}
               <div>
-                <div style={{ height: 10, borderRadius: 5, background: 'var(--p-track)', overflow: 'hidden' }}>
+                <div style={{ height: 10, borderRadius: 5, background: 'var(--p-track, rgba(0,0,0,0.09))', overflow: 'hidden' }}>
                   <div style={{
                     height: '100%', borderRadius: 5,
                     width: `${is_cumulative ? monthPct : selectedPct}%`,
@@ -234,79 +230,66 @@ export function MetasCalendar({ days, goals, year, month, today, rule, is_cumula
                 </div>
               </div>
 
-              {/* Sparkline with value labels */}
+              {/* CSS bar chart — no SVG distortion */}
               {hasSparkData && (
                 <div>
-                  <p style={{ margin: 0, marginBottom: '0.4rem', fontSize: '0.65rem', color: muted }}>Evolução do mês</p>
-                  <svg width="100%" height={svgH} viewBox={`0 0 ${svgW} ${svgH}`} preserveAspectRatio="none">
-                    {days.map((d, i) => {
-                      const entry = sparkData[i]
-                      if (entry === null) return null
-                      const { pct, val } = entry
-                      const barH = Math.max(3, (pct / 100) * barAreaH)
-                      const isThisDay = d === selectedDay
-                      const barColor = pct >= 100 ? '#8DB23C' : pct >= 70 ? '#FFDF00' : '#f97316'
-                      const barX = i * 14 + 1
-                      const barY = labelH + barAreaH - barH
-                      const label = formatValueCompact(val, vt, dp)
-                      return (
-                        <g
-                          key={d}
-                          onMouseEnter={() => setHoveredDay(d)}
-                          onMouseLeave={() => setHoveredDay(null)}
-                          style={{ cursor: 'pointer' }}
-                        >
-                          {/* Wider invisible hit area */}
-                          <rect x={barX - 1} y={labelH} width={13} height={barAreaH} fill="transparent" />
-                          <rect
-                            x={barX}
-                            y={barY}
-                            width={11}
-                            height={barH}
-                            rx={2}
-                            fill={isThisDay ? '#FFDF00' : barColor}
-                            opacity={isThisDay ? 1 : hoveredDay === d ? 1 : 0.6}
-                          />
-                          <text
-                            x={barX + 5.5}
-                            y={labelH - 4}
-                            textAnchor="middle"
-                            fontSize={9}
-                            fill={isThisDay ? '#FFDF00' : barColor}
-                            opacity={isThisDay ? 1 : 0.8}
-                            fontFamily="var(--font-outfit, sans-serif)"
-                            fontWeight={isThisDay ? 700 : 500}
-                          >
-                            {label}
-                          </text>
-                        </g>
-                      )
-                    })}
-                    {/* 100% reference line */}
-                    <line x1={0} y1={labelH + 2} x2={svgW} y2={labelH + 2} stroke="var(--p-track)" strokeWidth={1} strokeDasharray="3 3" />
+                  <p style={{ margin: 0, marginBottom: '0.5rem', fontSize: '0.65rem', color: muted }}>Evolução do mês</p>
 
-                    {/* Hover tooltip */}
+                  {/* Hover tooltip summary */}
+                  <div style={{ minHeight: 32, marginBottom: '0.4rem' }}>
                     {hoveredDay !== null && (() => {
                       const hi = days.indexOf(hoveredDay)
                       const hEntry = sparkData[hi]
                       const hGoal = goalForDay(hoveredDay)
                       if (!hEntry || !hGoal) return null
-                      const cx = hi * 14 + 7
-                      const tw = 96
-                      const tx = Math.max(2, Math.min(cx - tw / 2, svgW - tw - 2))
+                      const ds = dateStr(hoveredDay)
+                      const dateLabel = new Date(ds + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' })
+                      const pctLabel = Math.round(hEntry.pct)
+                      const pctColor = hEntry.pct >= 100 ? '#8DB23C' : hEntry.pct >= 70 ? '#FFDF00' : '#f97316'
                       return (
-                        <g>
-                          <rect x={tx} y={labelH + 6} width={tw} height={32} rx={4} fill="rgba(13,26,15,0.92)" />
-                          <text x={tx + 7} y={labelH + 20} fontSize={8.5} fill="#8DB23C" fontFamily="sans-serif" fontWeight={700}>
-                            ✓ {formatValueCompact(hEntry.val, vt, dp)}
-                          </text>
-                          <text x={tx + 7} y={labelH + 32} fontSize={8.5} fill="rgba(255,255,255,0.6)" fontFamily="sans-serif">
-                            □ {formatValueCompact(hGoal.target_value, vt, dp)}
-                          </text>
-                        </g>
+                        <div style={{
+                          background: 'rgba(13,26,15,0.88)', borderRadius: '0 0.4rem 0.4rem 0.4rem',
+                          padding: '0.35rem 0.75rem', display: 'flex', alignItems: 'center',
+                          gap: '0.75rem', fontSize: '0.75rem', flexWrap: 'wrap',
+                        }}>
+                          <span style={{ color: 'rgba(255,255,255,0.45)' }}>{dateLabel}</span>
+                          <span style={{ color: '#8DB23C', fontWeight: 700 }}>✓ {formatValueCompact(hEntry.val, vt, dp)}</span>
+                          <span style={{ color: 'rgba(255,255,255,0.45)' }}>□ {formatValueCompact(hGoal.target_value, vt, dp)}</span>
+                          <span style={{ color: pctColor, fontWeight: 600 }}>{pctLabel}%</span>
+                        </div>
                       )
                     })()}
-                  </svg>
+                  </div>
+
+                  {/* Bars */}
+                  <div style={{ display: 'flex', alignItems: 'flex-end', height: 60, gap: '2px' }}>
+                    {days.map((d, i) => {
+                      const entry = sparkData[i]
+                      const isThisDay = d === selectedDay
+                      const isHovered = hoveredDay === d
+                      if (!entry) return <div key={d} style={{ flex: 1 }} />
+                      const { pct } = entry
+                      const barH = Math.max(3, (pct / 100) * 56)
+                      const barColor = pct >= 100 ? '#8DB23C' : pct >= 70 ? '#FFDF00' : '#f97316'
+                      return (
+                        <div
+                          key={d}
+                          style={{ flex: 1, display: 'flex', alignItems: 'flex-end', height: '100%', cursor: 'pointer' }}
+                          onMouseEnter={() => setHoveredDay(d)}
+                          onMouseLeave={() => setHoveredDay(null)}
+                        >
+                          <div style={{
+                            width: '100%', height: barH,
+                            background: isThisDay ? '#FFDF00' : barColor,
+                            opacity: isThisDay ? 1 : isHovered ? 1 : 0.55,
+                            borderRadius: '2px 2px 0 0',
+                            transition: 'opacity 0.1s',
+                          }} />
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div style={{ height: 1, background: 'var(--p-separator, rgba(0,0,0,0.06))' }} />
                 </div>
               )}
             </>

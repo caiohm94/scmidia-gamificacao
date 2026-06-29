@@ -89,9 +89,9 @@ export default async function ParticipantDashboard() {
     todayGoals = [...byRule.entries()].map(([, entries]) => {
       const rule = entries[0].scoring_rules
       if (rule?.is_cumulative) {
-        // Sum all actual values for the month, show against total monthly target
         const totalActual = entries.reduce((s, g) => s + (g.actual_value ?? 0), 0)
-        const totalTarget = entries.reduce((s, g) => s + g.target_value, 0)
+        // Target = sum of goals up to today (not full month)
+        const totalTarget = entries.filter(g => g.period_date <= today).reduce((s, g) => s + g.target_value, 0)
         return { ...entries[0], actual_value: totalActual, target_value: totalTarget, period_date: monthStart }
       }
       if (rule?.target_period === 'monthly') {
@@ -113,9 +113,9 @@ export default async function ParticipantDashboard() {
     if (cp?.photo_url) participantPhoto = cp.photo_url
   }
 
-  const cardBg = 'var(--p-card-bg)'
-  const cardBorder = 'var(--p-card-border)'
-  const muted = 'var(--p-muted)'
+  const cardBg = 'var(--p-card-bg, rgba(0,0,0,0.035))'
+  const cardBorder = 'var(--p-card-border, rgba(0,0,0,0.1))'
+  const muted = 'var(--p-muted, #6b7d6c)'
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -124,18 +124,18 @@ export default async function ParticipantDashboard() {
       <div style={{
         background: cardBg, border: `1px solid ${cardBorder}`,
         borderRadius: '0 1.25rem 1.25rem 1.25rem', overflow: 'hidden',
-        display: 'flex', alignItems: 'stretch', minHeight: 160,
+        display: 'flex', alignItems: 'stretch',
       }}>
-        {/* Photo column */}
-        <div style={{ width: 200, flexShrink: 0, position: 'relative', overflow: 'hidden' }}>
+        {/* Photo column — natural size, no crop */}
+        <div style={{ width: 220, flexShrink: 0 }}>
           {participantPhoto ? (
             <img
               src={participantPhoto}
               alt={user.name}
-              style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top', display: 'block' }}
+              style={{ width: '100%', height: 'auto', display: 'block' }}
             />
           ) : (
-            <div style={{ width: '100%', height: '100%', background: 'rgba(141,178,60,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem', color: '#8DB23C', fontWeight: 800, fontFamily: 'var(--font-outfit)' }}>
+            <div style={{ width: '100%', minHeight: 180, background: 'rgba(141,178,60,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem', color: '#8DB23C', fontWeight: 800, fontFamily: 'var(--font-outfit)' }}>
               {user.name.charAt(0).toUpperCase()}
             </div>
           )}
@@ -194,7 +194,7 @@ export default async function ParticipantDashboard() {
       {/* Goals */}
       {todayGoals.length > 0 && (
         <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '0 1rem 1rem 1rem', overflow: 'hidden' }}>
-          <div style={{ padding: '0.75rem 1.25rem', borderBottom: '1px solid var(--p-sub-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ padding: '0.75rem 1.25rem', borderBottom: '1px solid var(--p-sub-border, rgba(0,0,0,0.07))', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <p style={{ fontWeight: 600, fontSize: '0.82rem', fontFamily: 'var(--font-outfit)', margin: 0 }}>Minhas metas</p>
             <a href="/participant/metas" style={{ fontSize: '0.72rem', color: '#8DB23C', textDecoration: 'none' }}>Ver tudo →</a>
           </div>
@@ -217,16 +217,16 @@ export default async function ParticipantDashboard() {
       {/* Recent points + bonuses */}
       <div style={{ display: 'grid', gridTemplateColumns: earnedBonuses.length > 0 ? '1fr 1fr' : '1fr', gap: '0.75rem' }}>
         <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '0 1rem 1rem 1rem', overflow: 'hidden' }}>
-          <div style={{ padding: '0.75rem 1.25rem', borderBottom: '1px solid var(--p-sub-border)' }}>
+          <div style={{ padding: '0.75rem 1.25rem', borderBottom: '1px solid var(--p-sub-border, rgba(0,0,0,0.07))' }}>
             <p style={{ fontWeight: 600, fontSize: '0.82rem', fontFamily: 'var(--font-outfit)', margin: 0 }}>Últimos pontos</p>
           </div>
           <div>
             {myPoints.length === 0
               ? <p style={{ padding: '1.5rem', textAlign: 'center', color: muted, fontSize: '0.82rem' }}>Nenhum ponto ainda.</p>
               : myPoints.slice(0, 8).map(pt => (
-                  <div key={pt.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.6rem 1.25rem', borderBottom: '1px solid var(--p-separator)' }}>
+                  <div key={pt.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.6rem 1.25rem', borderBottom: '1px solid var(--p-separator, rgba(0,0,0,0.05))' }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: '0.82rem', color: 'var(--p-text-dim)', margin: 0, fontWeight: 500 }}>
+                      <p style={{ fontSize: '0.82rem', color: 'var(--p-text-dim, #2a3d2b)', margin: 0, fontWeight: 500 }}>
                         {pt.scoring_rules?.name ?? 'Bônus'}
                       </p>
                       {pt.description && (
@@ -253,7 +253,7 @@ export default async function ParticipantDashboard() {
 
         {earnedBonuses.length > 0 && (
           <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '0 1rem 1rem 1rem', overflow: 'hidden' }}>
-            <div style={{ padding: '0.75rem 1.25rem', borderBottom: '1px solid var(--p-sub-border)' }}>
+            <div style={{ padding: '0.75rem 1.25rem', borderBottom: '1px solid var(--p-sub-border, rgba(0,0,0,0.07))' }}>
               <p style={{ fontWeight: 600, fontSize: '0.82rem', fontFamily: 'var(--font-outfit)', margin: 0 }}>Conquistas</p>
             </div>
             <div style={{ padding: '1rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>

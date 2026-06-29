@@ -28,9 +28,9 @@ export default async function HistoryPage() {
 
   const points = (rawPoints ?? []) as HistoryRow[]
 
-  const cardBg = 'var(--p-card-bg)'
-  const cardBorder = 'var(--p-card-border)'
-  const muted = 'var(--p-muted)'
+  const cardBg = 'var(--p-card-bg, rgba(0,0,0,0.035))'
+  const cardBorder = 'var(--p-card-border, rgba(0,0,0,0.1))'
+  const muted = 'var(--p-muted, #6b7d6c)'
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -70,7 +70,7 @@ export default async function HistoryPage() {
 
             {/* Content */}
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ margin: 0, fontWeight: 600, fontSize: '0.88rem', color: 'var(--p-text)' }}>
+              <p style={{ margin: 0, fontWeight: 600, fontSize: '0.88rem', color: 'var(--p-text, #111c12)' }}>
                 {pt.scoring_rules?.name ?? 'Bônus'}
               </p>
               {pt.description && (
@@ -95,7 +95,7 @@ export default async function HistoryPage() {
 
             {/* Date */}
             <div style={{ textAlign: 'right', flexShrink: 0 }}>
-              <p style={{ margin: 0, fontSize: '0.78rem', fontWeight: 600, color: 'var(--p-text-dim)' }}>
+              <p style={{ margin: 0, fontSize: '0.78rem', fontWeight: 600, color: 'var(--p-text-dim, #2a3d2b)' }}>
                 {format(new Date(pt.event_date), 'dd/MM')}
               </p>
               <p style={{ margin: 0, fontSize: '0.65rem', color: muted }}>
