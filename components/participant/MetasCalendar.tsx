@@ -22,9 +22,10 @@ interface Props {
   month: number
   today: string
   rule: Rule
+  is_cumulative?: boolean
 }
 
-export function MetasCalendar({ days, goals, year, month, today, rule }: Props) {
+export function MetasCalendar({ days, goals, year, month, today, rule, is_cumulative }: Props) {
   const [selectedDay, setSelectedDay] = useState<number | null>(null)
 
   const muted = 'var(--p-muted)'
@@ -48,10 +49,10 @@ export function MetasCalendar({ days, goals, year, month, today, rule }: Props) 
     const achieved = g != null && g.actual_value != null && g.actual_value >= g.target_value
     const hasData = g != null && g.actual_value != null
 
-    let bg = 'rgba(255,255,255,0.06)'
+    let bg = 'var(--p-card-bg)'
     let color = muted
     let border = cardBorder
-    if (!g || isFuture) { bg = 'rgba(255,255,255,0.03)'; color = 'rgba(255,255,255,0.2)' }
+    if (!g || isFuture) { bg = 'transparent'; color = muted }
     else if (achieved) { bg = 'rgba(141,178,60,0.2)'; color = '#8DB23C'; border = 'rgba(141,178,60,0.3)' }
     else if (hasData) { bg = 'rgba(249,115,22,0.15)'; color = '#f97316'; border = 'rgba(249,115,22,0.25)' }
 
@@ -67,17 +68,30 @@ export function MetasCalendar({ days, goals, year, month, today, rule }: Props) 
     && selectedGoal.actual_value != null
     && selectedGoal.actual_value >= selectedGoal.target_value
 
-  // Build sparkline data for all days (only days with data, % of target)
+  // Month totals for cumulative
+  const monthTotalActual = goals.reduce((s, g) => s + (g.actual_value ?? 0), 0)
+  const monthTotalTarget = goals.reduce((s, g) => s + g.target_value, 0)
+  const monthPct = monthTotalTarget > 0 ? Math.min((monthTotalActual / monthTotalTarget) * 100, 100) : 0
+  const monthAchieved = monthTotalActual >= monthTotalTarget && monthTotalTarget > 0
+
+  // Sparkline data
   const sparkData = days.map(d => {
     const g = goalForDay(d)
     if (!g || g.actual_value == null || g.target_value === 0) return null
-    return Math.min((g.actual_value / g.target_value) * 100, 120)
+    return {
+      pct: Math.min((g.actual_value / g.target_value) * 100, 120),
+      val: g.actual_value,
+    }
   })
   const hasSparkData = sparkData.some(v => v !== null)
 
+  const svgW = days.length * 14
+  const barAreaH = 52
+  const labelH = 18
+  const svgH = barAreaH + labelH
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-      {/* Calendar grid */}
       <p style={{ fontSize: '0.7rem', color: muted, marginBottom: '0.25rem', fontWeight: 500 }}>
         Dias do mês — clique para ver detalhes
       </p>
@@ -117,7 +131,7 @@ export function MetasCalendar({ days, goals, year, month, today, rule }: Props) 
         {[
           { color: '#8DB23C', label: 'Bateu a meta' },
           { color: '#f97316', label: 'Abaixo da meta' },
-          { color: 'rgba(255,255,255,0.2)', label: 'Sem meta / futuro' },
+          { color: muted, label: 'Sem meta / futuro' },
         ].map(l => (
           <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: l.color }} />
@@ -134,7 +148,6 @@ export function MetasCalendar({ days, goals, year, month, today, rule }: Props) 
           display: 'flex', flexDirection: 'column', gap: '0.9rem',
           animation: 'fadeSlideIn 0.18s ease',
         }}>
-          {/* Header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem', fontFamily: 'var(--font-outfit)' }}>
@@ -152,16 +165,21 @@ export function MetasCalendar({ days, goals, year, month, today, rule }: Props) 
 
           {selectedGoal ? (
             <>
-              {/* Big values */}
+              {/* Individual day values */}
+              {is_cumulative && (
+                <p style={{ margin: 0, fontSize: '0.68rem', color: muted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Este dia
+                </p>
+              )}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.6rem', textAlign: 'center' }}>
-                <div style={{ background: 'var(--p-card-bg)', borderRadius: '0 0.5rem 0.5rem 0.5rem', padding: '0.6rem' }}>
+                <div style={{ background: 'var(--p-card-bg)', border: `1px solid ${cardBorder}`, borderRadius: '0 0.5rem 0.5rem 0.5rem', padding: '0.6rem' }}>
                   <p style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, fontFamily: 'var(--font-outfit)', color: selectedAchieved ? '#8DB23C' : '#f97316' }}>
                     {formatValueCompact(selectedGoal.actual_value ?? 0, vt, dp)}
                   </p>
                   <p style={{ margin: 0, fontSize: '0.65rem', color: muted }}>realizado</p>
                 </div>
-                <div style={{ background: 'var(--p-card-bg)', borderRadius: '0 0.5rem 0.5rem 0.5rem', padding: '0.6rem' }}>
-                  <p style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, fontFamily: 'var(--font-outfit)', color: 'rgba(255,255,255,0.6)' }}>
+                <div style={{ background: 'var(--p-card-bg)', border: `1px solid ${cardBorder}`, borderRadius: '0 0.5rem 0.5rem 0.5rem', padding: '0.6rem' }}>
+                  <p style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, fontFamily: 'var(--font-outfit)', color: 'var(--p-text-dim)' }}>
                     {formatValueCompact(selectedGoal.target_value, vt, dp)}
                   </p>
                   <p style={{ margin: 0, fontSize: '0.65rem', color: muted }}>meta</p>
@@ -174,46 +192,91 @@ export function MetasCalendar({ days, goals, year, month, today, rule }: Props) 
                 </div>
               </div>
 
+              {/* Accumulated totals for cumulative rules */}
+              {is_cumulative && (
+                <>
+                  <p style={{ margin: 0, fontSize: '0.68rem', color: muted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', borderTop: '1px solid var(--p-separator)', paddingTop: '0.75rem' }}>
+                    Acumulado no mês
+                  </p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.6rem', textAlign: 'center' }}>
+                    <div style={{ background: 'var(--p-card-bg)', border: `1px solid ${cardBorder}`, borderRadius: '0 0.5rem 0.5rem 0.5rem', padding: '0.6rem' }}>
+                      <p style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, fontFamily: 'var(--font-outfit)', color: monthAchieved ? '#8DB23C' : '#f97316' }}>
+                        {formatValueCompact(monthTotalActual, vt, dp)}
+                      </p>
+                      <p style={{ margin: 0, fontSize: '0.65rem', color: muted }}>realizado</p>
+                    </div>
+                    <div style={{ background: 'var(--p-card-bg)', border: `1px solid ${cardBorder}`, borderRadius: '0 0.5rem 0.5rem 0.5rem', padding: '0.6rem' }}>
+                      <p style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, fontFamily: 'var(--font-outfit)', color: 'var(--p-text-dim)' }}>
+                        {formatValueCompact(monthTotalTarget, vt, dp)}
+                      </p>
+                      <p style={{ margin: 0, fontSize: '0.65rem', color: muted }}>orçado</p>
+                    </div>
+                    <div style={{ background: monthAchieved ? 'rgba(141,178,60,0.1)' : 'rgba(249,115,22,0.08)', borderRadius: '0 0.5rem 0.5rem 0.5rem', padding: '0.6rem', border: `1px solid ${monthAchieved ? 'rgba(141,178,60,0.25)' : 'rgba(249,115,22,0.2)'}` }}>
+                      <p style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, fontFamily: 'var(--font-outfit)', color: monthAchieved ? '#8DB23C' : '#f97316' }}>
+                        {Math.round(monthPct)}%
+                      </p>
+                      <p style={{ margin: 0, fontSize: '0.65rem', color: muted }}>{monthAchieved ? '✅ meta batida' : 'atingido'}</p>
+                    </div>
+                  </div>
+                </>
+              )}
+
               {/* Progress bar */}
               <div>
                 <div style={{ height: 10, borderRadius: 5, background: 'var(--p-track)', overflow: 'hidden' }}>
                   <div style={{
                     height: '100%', borderRadius: 5,
-                    width: `${selectedPct}%`,
-                    background: selectedAchieved ? '#8DB23C' : selectedPct >= 70 ? '#FFDF00' : '#f97316',
+                    width: `${is_cumulative ? monthPct : selectedPct}%`,
+                    background: (is_cumulative ? monthAchieved : selectedAchieved) ? '#8DB23C' : (is_cumulative ? monthPct : selectedPct) >= 70 ? '#FFDF00' : '#f97316',
                     transition: 'width 0.6s cubic-bezier(0.25,0.46,0.45,0.94)',
                   }} />
                 </div>
               </div>
 
-              {/* Sparkline — all days of month */}
+              {/* Sparkline with value labels */}
               {hasSparkData && (
                 <div>
                   <p style={{ margin: 0, marginBottom: '0.4rem', fontSize: '0.65rem', color: muted }}>Evolução do mês</p>
-                  <svg width="100%" height="48" viewBox={`0 0 ${days.length * 14} 48`} preserveAspectRatio="none">
+                  <svg width="100%" height={svgH} viewBox={`0 0 ${svgW} ${svgH}`} preserveAspectRatio="none">
                     {days.map((d, i) => {
-                      const val = sparkData[i]
-                      if (val === null) return null
-                      const barH = Math.max(3, (val / 100) * 44)
+                      const entry = sparkData[i]
+                      if (entry === null) return null
+                      const { pct, val } = entry
+                      const barH = Math.max(3, (pct / 100) * barAreaH)
                       const isThisDay = d === selectedDay
-                      const barColor = val >= 100 ? '#8DB23C' : val >= 70 ? '#FFDF00' : '#f97316'
+                      const barColor = pct >= 100 ? '#8DB23C' : pct >= 70 ? '#FFDF00' : '#f97316'
+                      const barX = i * 14 + 1
+                      const barY = labelH + barAreaH - barH
+                      const label = formatValueCompact(val, vt, dp)
                       return (
-                        <rect
-                          key={d}
-                          x={i * 14 + 1}
-                          y={48 - barH}
-                          width={11}
-                          height={barH}
-                          rx={2}
-                          fill={isThisDay ? '#FFDF00' : barColor}
-                          opacity={isThisDay ? 1 : 0.55}
-                        />
+                        <g key={d}>
+                          <rect
+                            x={barX}
+                            y={barY}
+                            width={11}
+                            height={barH}
+                            rx={2}
+                            fill={isThisDay ? '#FFDF00' : barColor}
+                            opacity={isThisDay ? 1 : 0.6}
+                          />
+                          <text
+                            x={barX + 5.5}
+                            y={labelH - 2}
+                            textAnchor="middle"
+                            fontSize={6}
+                            fill={isThisDay ? '#FFDF00' : barColor}
+                            opacity={isThisDay ? 1 : 0.7}
+                            fontFamily="var(--font-outfit, sans-serif)"
+                            fontWeight={isThisDay ? 700 : 500}
+                          >
+                            {label}
+                          </text>
+                        </g>
                       )
                     })}
-                    {/* 100% line */}
-                    <line x1={0} y1={4} x2={days.length * 14} y2={4} stroke="rgba(255,255,255,0.1)" strokeWidth={1} strokeDasharray="3 3" />
+                    {/* 100% reference line */}
+                    <line x1={0} y1={labelH + 2} x2={svgW} y2={labelH + 2} stroke="var(--p-track)" strokeWidth={1} strokeDasharray="3 3" />
                   </svg>
-                  <p style={{ margin: 0, fontSize: '0.6rem', color: 'rgba(255,255,255,0.15)', textAlign: 'right' }}>barra amarela = dia selecionado</p>
                 </div>
               )}
             </>

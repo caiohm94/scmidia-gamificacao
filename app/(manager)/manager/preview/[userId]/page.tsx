@@ -366,6 +366,7 @@ export default async function PreviewPage({
                             value_type: rule.value_type,
                             decimal_places: rule.decimal_places,
                           }}
+                          is_cumulative={rule.is_cumulative ?? false}
                         />
                       )}
                     </div>

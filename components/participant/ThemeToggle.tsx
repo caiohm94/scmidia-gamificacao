@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 
 export const THEMES = {
   padrao: {
-    bg: '#f0faf0',
+    bg: '#ffffff',
     headerBg: '#0d1a0f',
     label: '🌿 Padrão',
     vars: {

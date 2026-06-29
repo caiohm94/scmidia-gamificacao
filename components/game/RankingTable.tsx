@@ -42,37 +42,47 @@ export function RankingTable({ rows, highlightUserId }: Props) {
                 background: '#fff',
                 border: isHighlight ? '2px solid #8DB23C' : '1px solid rgba(63,62,62,0.1)',
                 borderRadius: '0 1rem 1rem 1rem',
-                padding: '1.25rem 1rem',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.6rem',
-                boxShadow: `0 4px 16px ${medal.shadow}`,
-                position: 'relative',
+                overflow: 'hidden',
+                boxShadow: `0 4px 20px ${medal.shadow}`,
+                display: 'flex', flexDirection: 'column',
               }}>
-                {/* Position badge */}
-                <div style={{
-                  position: 'absolute', top: '-0.6rem', left: '50%', transform: 'translateX(-50%)',
-                  background: medal.bg, color: medal.text,
-                  borderRadius: '50%', width: 28, height: 28,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '0.75rem', fontWeight: 800, boxShadow: `0 2px 8px ${medal.shadow}`,
-                  fontFamily: 'var(--font-outfit)',
-                }}>
-                  {i + 1}
+                {/* Full-bleed photo */}
+                <div style={{ position: 'relative', width: '100%', height: 220, overflow: 'hidden', flexShrink: 0 }}>
+                  {row.avatar_url ? (
+                    <img
+                      src={row.avatar_url}
+                      alt={row.name ?? ''}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top', display: 'block' }}
+                    />
+                  ) : (
+                    <div style={{ width: '100%', height: '100%', background: 'rgba(141,178,60,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '4rem', fontWeight: 800, color: '#8DB23C', fontFamily: 'var(--font-outfit)' }}>
+                      {row.name?.charAt(0).toUpperCase() ?? '?'}
+                    </div>
+                  )}
+                  <div style={{
+                    position: 'absolute', top: '0.6rem', left: '50%', transform: 'translateX(-50%)',
+                    background: medal.bg, color: medal.text,
+                    borderRadius: '50%', width: 32, height: 32,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '0.8rem', fontWeight: 800, boxShadow: `0 2px 10px ${medal.shadow}`,
+                    fontFamily: 'var(--font-outfit)',
+                  }}>
+                    {i + 1}
+                  </div>
                 </div>
 
-                <Avatar src={row.avatar_url} name={row.name} size={56} />
-
-                <div style={{ textAlign: 'center' }}>
-                  <p style={{ fontWeight: 700, fontSize: '0.9rem', color: '#3F3E3E', fontFamily: 'var(--font-outfit)', lineHeight: 1.2 }}>
+                {/* Details below photo */}
+                <div style={{ padding: '0.85rem 1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', flex: 1 }}>
+                  <p style={{ fontWeight: 700, fontSize: '0.9rem', color: '#3F3E3E', fontFamily: 'var(--font-outfit)', lineHeight: 1.2, textAlign: 'center', margin: 0 }}>
                     {row.name || '—'}
                   </p>
                   {row.function && (
-                    <p style={{ fontSize: '0.7rem', color: 'rgba(63,62,62,0.45)', marginTop: '0.15rem' }}>
+                    <p style={{ fontSize: '0.7rem', color: 'rgba(63,62,62,0.45)', margin: 0 }}>
                       {fnLabel[row.function] ?? row.function}
                     </p>
                   )}
                   {row.team_name && (
                     <span style={{
-                      display: 'inline-block', marginTop: '0.3rem',
                       fontSize: '0.65rem', padding: '0.1rem 0.45rem',
                       borderRadius: '0 0.25rem 0.25rem 0.25rem',
                       background: (row.team_color ?? '#8DB23C') + '20',
@@ -81,21 +91,14 @@ export function RankingTable({ rows, highlightUserId }: Props) {
                       {row.team_name}
                     </span>
                   )}
+                  <div style={{ background: 'rgba(141,178,60,0.08)', borderRadius: '0 0.5rem 0.5rem 0.5rem', padding: '0.3rem 0.75rem', textAlign: 'center', marginTop: '0.15rem' }}>
+                    <span style={{ fontSize: '1.3rem', fontWeight: 800, color: '#5C7435', fontFamily: 'var(--font-outfit)' }}>
+                      {row.total_points.toLocaleString('pt-BR')}
+                    </span>
+                    <span style={{ fontSize: '0.65rem', color: 'rgba(63,62,62,0.4)', marginLeft: '0.2rem' }}>pts</span>
+                  </div>
+                  {row.current_streak > 0 && <StreakBadge streak={row.current_streak} />}
                 </div>
-
-                <div style={{
-                  background: 'rgba(141,178,60,0.08)', borderRadius: '0 0.5rem 0.5rem 0.5rem',
-                  padding: '0.3rem 0.75rem', textAlign: 'center',
-                }}>
-                  <span style={{ fontSize: '1.3rem', fontWeight: 800, color: '#5C7435', fontFamily: 'var(--font-outfit)' }}>
-                    {row.total_points.toLocaleString('pt-BR')}
-                  </span>
-                  <span style={{ fontSize: '0.65rem', color: 'rgba(63,62,62,0.4)', marginLeft: '0.2rem' }}>pts</span>
-                </div>
-
-                {row.current_streak > 0 && (
-                  <StreakBadge streak={row.current_streak} />
-                )}
               </div>
             )
           })}

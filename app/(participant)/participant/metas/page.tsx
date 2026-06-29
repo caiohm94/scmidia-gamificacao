@@ -10,7 +10,7 @@ type GoalWithRule = {
   actual_value: number | null
   target_value: number
   period_date: string
-  scoring_rules: { name: string; value_type: string; decimal_places: number; target_period: string | null } | null
+  scoring_rules: { name: string; value_type: string; decimal_places: number; target_period: string | null; is_cumulative: boolean } | null
 }
 
 export default async function MetasPage() {
@@ -28,7 +28,7 @@ export default async function MetasPage() {
 
   const { data } = await supabase
     .from('participant_goals')
-    .select('id, scoring_rule_id, actual_value, target_value, period_date, scoring_rules(name, value_type, decimal_places, target_period)')
+    .select('id, scoring_rule_id, actual_value, target_value, period_date, scoring_rules(name, value_type, decimal_places, target_period, is_cumulative)')
     .eq('user_id', user.id)
     .gte('period_date', monthStart)
     .lte('period_date', monthEnd)
@@ -106,6 +106,7 @@ export default async function MetasPage() {
                     value_type: rule.value_type,
                     decimal_places: rule.decimal_places,
                   }}
+                  is_cumulative={rule.is_cumulative ?? false}
                 />
               )}
             </div>

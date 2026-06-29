@@ -123,31 +123,39 @@ export default async function ParticipantDashboard() {
       {/* Hero */}
       <div style={{
         background: cardBg, border: `1px solid ${cardBorder}`,
-        borderRadius: '0 1.25rem 1.25rem 1.25rem', padding: '1.5rem',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        flexWrap: 'wrap', gap: '1rem',
+        borderRadius: '0 1.25rem 1.25rem 1.25rem', overflow: 'hidden',
+        display: 'flex', alignItems: 'stretch', minHeight: 160,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-          <Avatar src={participantPhoto} name={user.name} size={72} />
+        {/* Photo column */}
+        <div style={{ width: 140, flexShrink: 0, position: 'relative', overflow: 'hidden' }}>
+          {participantPhoto ? (
+            <img
+              src={participantPhoto}
+              alt={user.name}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top', display: 'block' }}
+            />
+          ) : (
+            <div style={{ width: '100%', height: '100%', background: 'rgba(141,178,60,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem', color: '#8DB23C', fontWeight: 800, fontFamily: 'var(--font-outfit)' }}>
+              {user.name.charAt(0).toUpperCase()}
+            </div>
+          )}
+        </div>
+        {/* Info column */}
+        <div style={{ flex: 1, padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <div>
-            <h1 style={{
-              fontSize: '1.7rem', fontWeight: 800,
-              fontFamily: 'var(--font-outfit)', margin: 0, lineHeight: 1.1,
-            }}>
+            <h1 style={{ fontSize: '1.7rem', fontWeight: 800, fontFamily: 'var(--font-outfit)', margin: 0, lineHeight: 1.1 }}>
               Olá, {user.name.split(' ')[0]}! 👋
             </h1>
             {campaign && (
-              <p style={{ fontSize: '0.8rem', color: muted, marginTop: '0.25rem' }}>
-                {campaign.name}
-              </p>
+              <p style={{ fontSize: '0.8rem', color: muted, marginTop: '0.35rem' }}>{campaign.name}</p>
             )}
           </div>
-        </div>
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          {currentLevel && (
-            <LevelBadge name={currentLevel.name} icon={currentLevel.badge_icon} color={currentLevel.color} />
-          )}
-          <StreakBadge streak={myStreak} />
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.75rem' }}>
+            {currentLevel && (
+              <LevelBadge name={currentLevel.name} icon={currentLevel.badge_icon} color={currentLevel.color} />
+            )}
+            <StreakBadge streak={myStreak} />
+          </div>
         </div>
       </div>
 
