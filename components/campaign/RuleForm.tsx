@@ -34,6 +34,8 @@ export function RuleForm({ campaignId }: Props) {
     sf_frequency: '' as '5min' | 'daily' | 'weekly' | '',
     sf_run_time: '',
     sf_run_day: '',
+    value_type: 'number',
+    decimal_places: '0',
   })
 
   function resetForm() {
@@ -42,6 +44,7 @@ export function RuleForm({ campaignId }: Props) {
       target_value: '', target_period: '',
       data_origin: 'manual', sf_soql: '', sf_alias_field: 'Owner.Alias',
       sf_frequency: '', sf_run_time: '', sf_run_day: '',
+      value_type: 'number', decimal_places: '0',
     })
   }
 
@@ -63,6 +66,8 @@ export function RuleForm({ campaignId }: Props) {
       sf_frequency: isSf ? form.sf_frequency || undefined : undefined,
       sf_run_time: isSf && form.sf_run_time ? form.sf_run_time : undefined,
       sf_run_day: isSf && form.sf_run_day !== '' ? parseInt(form.sf_run_day) : undefined,
+      value_type: form.value_type,
+      decimal_places: parseInt(form.decimal_places) || 0,
     }
     const res = await fetch(`/api/campaigns/${campaignId}/rules`, {
       method: 'POST',
@@ -102,6 +107,27 @@ export function RuleForm({ campaignId }: Props) {
               <SelectItem value="behavior">Comportamento</SelectItem>
               <SelectItem value="bonus">Bônus</SelectItem>
               <SelectItem value="penalty">Penalidade</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label>Tipo de valor</Label>
+          <Select value={form.value_type} onValueChange={v => setForm(f => ({ ...f, value_type: v ?? 'number' }))}>
+            <SelectTrigger><span>{form.value_type === 'currency' ? 'Monetário (R$)' : 'Número'}</span></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="number">Número</SelectItem>
+              <SelectItem value="currency">Monetário (R$)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label>Casas decimais</Label>
+          <Select value={form.decimal_places} onValueChange={v => setForm(f => ({ ...f, decimal_places: v ?? '0' }))}>
+            <SelectTrigger><span>{{ '0': '0 — inteiro', '1': '1 — ex: 1,5', '2': '2 — ex: 1,50' }[form.decimal_places] ?? '0 — inteiro'}</span></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="0">0 — inteiro</SelectItem>
+              <SelectItem value="1">1 — ex: 1,5</SelectItem>
+              <SelectItem value="2">2 — ex: 1,50</SelectItem>
             </SelectContent>
           </Select>
         </div>
