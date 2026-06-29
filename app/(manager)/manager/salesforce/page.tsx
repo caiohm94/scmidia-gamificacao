@@ -3,6 +3,7 @@ import { requireRole } from '@/lib/auth/helpers'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { CloudDownload } from 'lucide-react'
+import { RematchButton } from '@/components/salesforce/RematchButton'
 
 type RecordRow = {
   id: string; sf_id: string; sf_created_at: string | null; imported_at: string
@@ -167,10 +168,13 @@ export default async function SalesforceImportsPage({ searchParams }: Props) {
                             <span style={{ fontSize: '0.75rem', color: 'rgba(63,62,62,0.65)' }}>{r.description ?? dash}</span>
                           </td>
                           <td style={{ ...tdStyle, fontSize: '0.72rem', color: 'rgba(63,62,62,0.5)' }}>{r.scoring_rules?.name ?? dash}</td>
-                          <td style={tdStyle}>
+                          <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>
                             {r.transaction_id
                               ? <span style={{ color: '#5C7435', fontWeight: 600, fontSize: '0.78rem' }}>✓ gerado</span>
-                              : <span style={{ color: 'rgba(63,62,62,0.35)', fontSize: '0.72rem' }}>sem match</span>}
+                              : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                                  <span style={{ color: 'rgba(63,62,62,0.35)', fontSize: '0.72rem' }}>sem match</span>
+                                  <RematchButton recordId={r.id} />
+                                </span>}
                           </td>
                           <td style={tdStyle}><code style={{ fontSize: '0.65rem', color: 'rgba(63,62,62,0.35)' }}>{r.sf_id}</code></td>
                         </tr>
