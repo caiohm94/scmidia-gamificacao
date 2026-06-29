@@ -123,7 +123,7 @@ export default async function PreviewPage({
       const rule = entries[0].scoring_rules
       if (rule?.is_cumulative) {
         const totalActual = entries.reduce((s, g) => s + (g.actual_value ?? 0), 0)
-        const totalTarget = entries.reduce((s, g) => s + g.target_value, 0)
+        const totalTarget = entries.filter(g => g.period_date <= todayStr).reduce((s, g) => s + g.target_value, 0)
         return { ...entries[0], actual_value: totalActual, target_value: totalTarget, period_date: monthStart }
       }
       if (rule?.target_period === 'monthly') {
@@ -197,20 +197,28 @@ export default async function PreviewPage({
         {/* ---- PAINEL ---- */}
         {tab === 'painel' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            {/* Hero */}
-            <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '0 1.25rem 1.25rem 1.25rem', padding: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-                <Avatar src={user.avatar_url} name={user.name} size={72} />
+            {/* Hero — full photo, no crop (mirrors participant dashboard) */}
+            <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '0 1.25rem 1.25rem 1.25rem', overflow: 'hidden', display: 'flex', alignItems: 'stretch' }}>
+              <div style={{ width: 220, flexShrink: 0 }}>
+                {user.avatar_url ? (
+                  <img src={user.avatar_url} alt={user.name} style={{ width: '100%', height: 'auto', display: 'block' }} />
+                ) : (
+                  <div style={{ width: '100%', minHeight: 180, background: 'rgba(141,178,60,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem', color: '#8DB23C', fontWeight: 800, fontFamily: 'var(--font-outfit)' }}>
+                    {user.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
+              </div>
+              <div style={{ flex: 1, padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                 <div>
                   <h1 style={{ fontSize: '1.7rem', fontWeight: 800, fontFamily: 'var(--font-outfit)', margin: 0, lineHeight: 1.1 }}>
                     Olá, {user.name.split(' ')[0]}! 👋
                   </h1>
-                  {campaign && <p style={{ fontSize: '0.8rem', color: muted, marginTop: '0.25rem' }}>{campaign.name}</p>}
+                  {campaign && <p style={{ fontSize: '0.8rem', color: muted, marginTop: '0.35rem' }}>{campaign.name}</p>}
                 </div>
-              </div>
-              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                {currentLevel && <LevelBadge name={currentLevel.name} icon={currentLevel.badge_icon} color={currentLevel.color} />}
-                <StreakBadge streak={myStreak} />
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.75rem' }}>
+                  {currentLevel && <LevelBadge name={currentLevel.name} icon={currentLevel.badge_icon} color={currentLevel.color} />}
+                  <StreakBadge streak={myStreak} />
+                </div>
               </div>
             </div>
 
