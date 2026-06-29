@@ -40,9 +40,18 @@ export default async function EditUserPage({ params }: Props) {
             <p style={{ fontSize: '0.75rem', color: 'rgba(63,62,62,0.45)', fontFamily: 'var(--font-outfit, sans-serif)', marginTop: '0.1rem' }}>{user.email}</p>
           </div>
         </div>
-        <Link href="/manager/users">
-          <button className="sc-btn-outline text-sm cursor-pointer">← Voltar</button>
-        </Link>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          {user.role === 'participant' && (
+            <Link href={`/manager/preview/${id}`} target="_blank">
+              <button className="sc-btn-outline text-sm cursor-pointer" style={{ color: '#8DB23C', borderColor: 'rgba(141,178,60,0.4)' }}>
+                Ver painel ↗
+              </button>
+            </Link>
+          )}
+          <Link href="/manager/users">
+            <button className="sc-btn-outline text-sm cursor-pointer">← Voltar</button>
+          </Link>
+        </div>
       </div>
 
       <div className="p-6">
