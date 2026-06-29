@@ -136,7 +136,10 @@ export async function importRule(ruleId: string, triggeredBy: string): Promise<I
       })
 
     if (recErr) {
-      result.errors.push(`Erro ao salvar registro SF ${sfId}: ${recErr.message}`)
+      console.error('[SF import] salesforce_records insert failed', {
+        sfId, code: recErr.code, message: recErr.message, details: recErr.details, hint: recErr.hint,
+      })
+      result.errors.push(`SF record ${sfId}: [${recErr.code}] ${recErr.message}${recErr.details ? ' — ' + recErr.details : ''}`)
       continue
     }
 
