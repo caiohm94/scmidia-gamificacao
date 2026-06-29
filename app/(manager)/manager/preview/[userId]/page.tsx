@@ -200,7 +200,7 @@ export default async function PreviewPage({
               </div>
               <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                 {currentLevel && <LevelBadge name={currentLevel.name} icon={currentLevel.badge_icon} color={currentLevel.color} />}
-                {myStreak > 0 && <StreakBadge streak={myStreak} />}
+                <StreakBadge streak={myStreak} />
               </div>
             </div>
 
@@ -378,42 +378,68 @@ export default async function PreviewPage({
 
         {/* ---- HISTÓRICO ---- */}
         {tab === 'historico' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <h1 style={{ fontSize: '1.5rem', fontWeight: 800, fontFamily: 'var(--font-outfit)' }}>Histórico de Pontos</h1>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <h1 style={{ fontSize: '1.5rem', fontWeight: 800, fontFamily: 'var(--font-outfit)', margin: 0 }}>Histórico de Pontos</h1>
             {myPoints.length === 0
-              ? <p style={{ color: muted, textAlign: 'center', padding: '3rem' }}>Nenhum ponto ainda.</p>
-              : myPoints.map(pt => (
-                  <div key={pt.id} style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem',
-                    padding: '1rem', borderRadius: '0 0.75rem 0.75rem 0.75rem',
-                    background: cardBg, border: `1px solid ${cardBorder}`,
-                    opacity: pt.status === 'reversed' ? 0.45 : 1,
-                  }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontWeight: 500, fontSize: '0.9rem', margin: 0 }}>{pt.scoring_rules?.name ?? 'Bônus'}</p>
-                      {pt.description && (
-                        <p style={{ fontSize: '0.72rem', color: muted, marginTop: '0.15rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {pt.description.replace(/^SF Import — [^(]+/, '').replace(/^\s*—\s*/, '').replace(/\(|\)/g, '').trim() || pt.description}
-                        </p>
-                      )}
-                      <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.25)', marginTop: '0.1rem' }}>{pt.campaigns?.name}</p>
-                    </div>
-                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                      <span style={{
-                        display: 'inline-block', padding: '0.2rem 0.6rem', fontSize: '0.85rem', fontWeight: 700,
-                        borderRadius: '0 0.35rem 0.35rem 0.35rem',
-                        background: pt.points > 0 ? 'rgba(141,178,60,0.2)' : 'rgba(220,53,69,0.15)',
+              ? <p style={{ color: muted, textAlign: 'center', padding: '3rem', fontSize: '0.85rem' }}>Nenhum ponto registrado ainda.</p>
+              : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  {myPoints.map(pt => (
+                    <div key={pt.id} style={{
+                      display: 'flex', alignItems: 'center', gap: '1rem',
+                      padding: '0.85rem 1.25rem',
+                      borderRadius: '0 0.75rem 0.75rem 0.75rem',
+                      background: pt.status === 'reversed' ? 'rgba(255,255,255,0.01)' : cardBg,
+                      border: `1px solid ${cardBorder}`,
+                      opacity: pt.status === 'reversed' ? 0.45 : 1,
+                    }}>
+                      {/* Points badge — LEFT */}
+                      <div style={{
+                        minWidth: 54, textAlign: 'center', padding: '0.3rem 0.5rem',
+                        borderRadius: '0 0.4rem 0.4rem 0.4rem',
+                        background: pt.points > 0 ? 'rgba(141,178,60,0.18)' : 'rgba(220,53,69,0.15)',
                         color: pt.points > 0 ? '#8DB23C' : '#f87171',
+                        fontSize: '0.85rem', fontWeight: 800, fontFamily: 'var(--font-outfit)',
                       }}>
-                        {pt.points > 0 ? '+' : ''}{pt.points} pts
-                      </span>
-                      <p style={{ fontSize: '0.72rem', color: muted, marginTop: '0.3rem' }}>
-                        {format(new Date(pt.event_date), "dd 'de' MMM yyyy", { locale: ptBR })}
-                      </p>
-                      {pt.status === 'reversed' && <p style={{ fontSize: '0.68rem', color: '#f87171', marginTop: '0.15rem' }}>Estornado</p>}
+                        {pt.points > 0 ? '+' : ''}{pt.points}
+                      </div>
+                      {/* Content */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ margin: 0, fontWeight: 600, fontSize: '0.88rem', color: 'rgba(255,255,255,0.9)' }}>
+                          {pt.scoring_rules?.name ?? 'Bônus'}
+                        </p>
+                        {pt.description && (
+                          <p style={{ margin: 0, marginTop: '0.15rem', fontSize: '0.72rem', color: muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {pt.description}
+                          </p>
+                        )}
+                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.2rem', flexWrap: 'wrap' }}>
+                          {pt.campaigns?.name && (
+                            <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.25)', background: 'rgba(255,255,255,0.05)', padding: '0.05rem 0.35rem', borderRadius: '0.2rem' }}>
+                              {pt.campaigns.name}
+                            </span>
+                          )}
+                          <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.2)' }}>
+                            {pt.origin === 'salesforce' ? 'Salesforce' : pt.origin === 'manual' ? 'Manual' : pt.origin}
+                          </span>
+                          {pt.status === 'reversed' && (
+                            <span style={{ fontSize: '0.65rem', color: '#f87171' }}>Estornado</span>
+                          )}
+                        </div>
+                      </div>
+                      {/* Date — RIGHT */}
+                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                        <p style={{ margin: 0, fontSize: '0.78rem', fontWeight: 600, color: 'rgba(255,255,255,0.6)' }}>
+                          {format(new Date(pt.event_date), 'dd/MM')}
+                        </p>
+                        <p style={{ margin: 0, fontSize: '0.65rem', color: muted }}>
+                          {format(new Date(pt.event_date), 'MMM yyyy', { locale: ptBR })}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
+              )}
           </div>
         )}
 
