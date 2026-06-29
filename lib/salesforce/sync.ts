@@ -9,6 +9,13 @@ export type SyncResult = {
   errors: string[]
 }
 
+function getField(record: Record<string, unknown>, path: string): unknown {
+  return path.split('.').reduce<unknown>((acc, key) => {
+    if (acc !== null && typeof acc === 'object') return (acc as Record<string, unknown>)[key]
+    return undefined
+  }, record)
+}
+
 export async function syncRule(ruleId: string, triggeredBy: string): Promise<SyncResult> {
   const admin = createAdminClient()
   const result: SyncResult = { rule_id: ruleId, rule_name: '', inserted: 0, skipped: 0, errors: [] }
@@ -61,10 +68,10 @@ export async function syncRule(ruleId: string, triggeredBy: string): Promise<Syn
   const today = new Date().toISOString().slice(0, 10)
 
   for (const sfRow of sfRows) {
-    const alias = String(sfRow[aliasField] ?? '').trim()
+    const alias = String(getField(sfRow, aliasField) ?? '').trim()
     if (!alias) { result.skipped++; continue }
 
-    const currentValue = Number(sfRow[valueField] ?? 0)
+    const currentValue = Number(getField(sfRow, valueField) ?? 0)
     const participant = participantList.find(p => p.users?.sf_alias === alias)
     if (!participant) { result.skipped++; continue }
 
