@@ -91,6 +91,7 @@ export async function importRule(ruleId: string, triggeredBy: string): Promise<I
     .map(r => String(r['Id'] ?? '').trim())
     .filter(Boolean)
 
+  // Records already imported for this rule (any status)
   const { data: existing } = await admin
     .from('salesforce_records')
     .select('sf_id')
@@ -98,6 +99,15 @@ export async function importRule(ruleId: string, triggeredBy: string): Promise<I
     .in('sf_id', sfIds.length > 0 ? sfIds : ['__none__'])
 
   const existingSet = new Set((existing ?? []).map(e => e.sf_id))
+
+  // SF IDs already matched (transaction created) across ANY rule — prevents double points
+  const { data: alreadyMatched } = await admin
+    .from('salesforce_records')
+    .select('sf_id')
+    .not('transaction_id', 'is', null)
+    .in('sf_id', sfIds.length > 0 ? sfIds : ['__none__'])
+
+  const alreadyMatchedSet = new Set((alreadyMatched ?? []).map(e => e.sf_id))
 
   const today = new Date().toISOString().slice(0, 10)
 
@@ -116,6 +126,18 @@ export async function importRule(ruleId: string, triggeredBy: string): Promise<I
     const participant = alias ? participantList.find(p => p.sf_alias === alias) : undefined
 
     let transactionId: string | null = null
+
+    // Skip point creation if this SF ID was already matched in another rule
+    if (participant && alreadyMatchedSet.has(sfId)) {
+      result.skipped++
+      // Still record it for audit but without transaction
+      await admin.from('salesforce_records').insert({
+        scoring_rule_id: rule.id, campaign_id: rule.campaign_id, sf_id: sfId,
+        sf_created_at: sfCreatedAt, owner_name: ownerName, sf_alias: alias || null,
+        account_name: accountName, description, user_id: participant.user_id, transaction_id: null,
+      })
+      continue
+    }
 
     if (participant) {
       const { data: txRows, error: txErr } = await admin
