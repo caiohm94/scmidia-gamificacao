@@ -6,6 +6,7 @@ export type ImportResult = {
   rule_name: string
   inserted: number
   skipped: number
+  already_existing: number
   errors: string[]
 }
 
@@ -22,12 +23,13 @@ function getField(record: Record<string, unknown>, path: string): unknown {
 
 export async function importRule(ruleId: string, triggeredBy: string): Promise<ImportResult> {
   const admin = createAdminClient()
-  const result: ImportResult = { rule_id: ruleId, rule_name: '', inserted: 0, skipped: 0, errors: [] }
+  const result: ImportResult = { rule_id: ruleId, rule_name: '', inserted: 0, skipped: 0, already_existing: 0, errors: [] }
 
   async function writeLog(sfFound: number) {
     const status = result.errors.length > 0 && result.inserted === 0 ? 'error'
       : result.errors.length > 0 ? 'partial'
       : result.inserted > 0 ? 'success'
+      : result.already_existing > 0 && result.skipped === result.already_existing ? 'already_imported'
       : 'no_match'
     const { error: logErr } = await admin.from('salesforce_sync_logs').insert({
       rule_id: ruleId,
@@ -115,7 +117,7 @@ export async function importRule(ruleId: string, triggeredBy: string): Promise<I
     const sfId = String(sfRow['Id'] ?? '').trim()
     if (!sfId) { result.skipped++; continue }
 
-    if (existingSet.has(sfId)) { result.skipped++; continue }
+    if (existingSet.has(sfId)) { result.skipped++; result.already_existing++; continue }
 
     const alias = String(getField(sfRow, aliasField) ?? '').trim()
     const ownerName = String(getField(sfRow, 'Owner.Name') ?? getField(sfRow, 'Name') ?? '').trim() || null

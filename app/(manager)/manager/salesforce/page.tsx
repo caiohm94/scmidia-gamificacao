@@ -22,13 +22,14 @@ type LogRow = {
 type Props = { searchParams: Promise<{ from?: string; to?: string; owner?: string; rule_id?: string; tab?: string }> }
 
 const statusStyle: Record<string, React.CSSProperties> = {
-  success:  { background: 'rgba(92,116,53,0.12)', color: '#5C7435' },
-  partial:  { background: 'rgba(255,180,0,0.12)', color: '#8B6914' },
-  no_match: { background: 'rgba(63,62,62,0.07)', color: 'rgba(63,62,62,0.5)' },
-  error:    { background: 'rgba(220,53,69,0.1)', color: '#dc3545' },
+  success:          { background: 'rgba(92,116,53,0.12)', color: '#5C7435' },
+  partial:          { background: 'rgba(255,180,0,0.12)', color: '#8B6914' },
+  no_match:         { background: 'rgba(220,53,69,0.08)', color: '#dc3545' },
+  already_imported: { background: 'rgba(63,62,62,0.07)', color: 'rgba(63,62,62,0.45)' },
+  error:            { background: 'rgba(220,53,69,0.1)', color: '#dc3545' },
 }
 const statusLabel: Record<string, string> = {
-  success: 'Inserido', partial: 'Parcial', no_match: 'Sem match', error: 'Erro',
+  success: 'Inserido', partial: 'Parcial', no_match: 'Sem match', already_imported: 'Já importado', error: 'Erro',
 }
 
 export default async function SalesforceImportsPage({ searchParams }: Props) {
