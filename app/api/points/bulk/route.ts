@@ -5,9 +5,15 @@ import { z } from 'zod'
 
 const bulkSchema = z.object({
   campaign_id: z.string().uuid(),
-  points: z.number().int().refine(v => v !== 0, 'Pontos não podem ser zero'),
   event_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   description: z.string().optional(),
+  // per-participant: array of { user_id, points }
+  participants: z.array(z.object({
+    user_id: z.string().uuid(),
+    points: z.number().int().refine(v => v !== 0, 'Pontos não podem ser zero'),
+  })).optional(),
+  // legacy: single value for all
+  points: z.number().int().optional(),
 })
 
 export async function POST(request: Request) {
@@ -35,16 +41,28 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Nenhum participante na campanha' }, { status: 400 })
   }
 
-  const rows = participants.map(p => ({
-    campaign_id: parsed.data.campaign_id,
-    user_id: p.user_id,
-    points: parsed.data.points,
-    event_date: parsed.data.event_date,
-    description: parsed.data.description ?? 'Saldo inicial',
-    origin: 'manual' as const,
-    scoring_rule_id: null,
-    created_by: user.id,
-  }))
+  // Build per-participant points map
+  const pointsMap = new Map<string, number>()
+  if (parsed.data.participants && parsed.data.participants.length > 0) {
+    for (const p of parsed.data.participants) pointsMap.set(p.user_id, p.points)
+  } else if (parsed.data.points) {
+    for (const p of participants) pointsMap.set(p.user_id, parsed.data.points)
+  } else {
+    return NextResponse.json({ error: 'Informe pontos ou participantes' }, { status: 400 })
+  }
+
+  const rows = participants
+    .filter(p => pointsMap.has(p.user_id))
+    .map(p => ({
+      campaign_id: parsed.data.campaign_id,
+      user_id: p.user_id,
+      points: pointsMap.get(p.user_id)!,
+      event_date: parsed.data.event_date,
+      description: parsed.data.description ?? 'Saldo inicial',
+      origin: 'manual' as const,
+      scoring_rule_id: null,
+      created_by: user.id,
+    }))
 
   const { data, error } = await admin.from('point_transactions').insert(rows).select()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
