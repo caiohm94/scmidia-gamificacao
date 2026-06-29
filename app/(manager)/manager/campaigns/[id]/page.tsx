@@ -42,12 +42,13 @@ export default async function CampaignDetailPage({ params }: Props) {
     .order('joined_at', { ascending: false })
   const participants = (participantsRaw ?? []) as unknown as ParticipantRow[]
 
-  type RuleRow = { id: string; name: string; points: number; target_period: string | null; description: string | null; is_active: boolean; data_origin: string }
-  const { data: rulesRaw } = await supabase
+  type RuleRow = { id: string; name: string; points: number; target_period: string | null; description: string | null; is_active: boolean; data_origin: string | null }
+  const { data: rulesRaw, error: rulesError } = await supabase
     .from('scoring_rules')
-    .select('id, name, points, target_period, description, is_active, data_origin')
+    .select('*')
     .eq('campaign_id', id)
     .order('created_at', { ascending: true })
+  if (rulesError) console.error('[rules]', rulesError.message)
   const rules = (rulesRaw ?? []) as unknown as RuleRow[]
 
   const tvUrl = `${baseUrl}/display/${campaign.slug}?token=${campaign.display_token}`
