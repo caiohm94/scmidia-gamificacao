@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { requireRole } from '@/lib/auth/helpers'
 import { format } from 'date-fns'
 import { History } from 'lucide-react'
+import { DeleteTransactionButton } from '@/components/points/DeleteTransactionButton'
 
 type TransactionRow = {
   id: string
@@ -78,7 +79,7 @@ export default async function PointsHistoryPage({
           <table className="w-full text-sm">
             <thead>
               <tr style={{ backgroundColor: 'rgba(63,62,62,0.04)', borderBottom: '1px solid rgba(63,62,62,0.08)' }}>
-                {['Data', 'Participante', 'Critério', 'Pontos', 'Status', 'Campanha', 'Origem'].map(h => (
+                {['Data', 'Participante', 'Critério', 'Pontos', 'Status', 'Campanha', 'Origem', ''].map(h => (
                   <th key={h} className="px-3 py-2.5 text-left whitespace-nowrap" style={{ fontFamily: 'var(--font-outfit, sans-serif)', fontWeight: 500, fontSize: '0.72rem', color: 'rgba(63,62,62,0.5)', letterSpacing: '0.03em' }}>{h}</th>
                 ))}
               </tr>
@@ -103,6 +104,7 @@ export default async function PointsHistoryPage({
                   </td>
                   <td className="px-3 py-2.5" style={{ fontSize: '0.75rem', color: 'rgba(63,62,62,0.5)' }}>{tx.campaigns?.name ?? '—'}</td>
                   <td className="px-3 py-2.5" style={{ fontSize: '0.72rem', color: 'rgba(63,62,62,0.4)', textTransform: 'capitalize' }}>{tx.origin}</td>
+                  <td className="px-3 py-2.5"><DeleteTransactionButton id={tx.id} /></td>
                 </tr>
               ))}
             </tbody>
