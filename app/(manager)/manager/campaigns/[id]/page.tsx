@@ -42,7 +42,13 @@ export default async function CampaignDetailPage({ params }: Props) {
     .order('joined_at', { ascending: false })
   const participants = (participantsRaw ?? []) as unknown as ParticipantRow[]
 
-  type RuleRow = { id: string; name: string; points: number; target_period: string | null; description: string | null; is_active: boolean; data_origin: string | null }
+  type RuleRow = {
+    id: string; name: string; points: number; target_period: string | null
+    description: string | null; is_active: boolean; data_origin: string | null
+    applies_to: string | null; category: string | null
+    sf_soql: string | null; sf_value_field: string | null; sf_alias_field: string | null
+    sf_frequency: string | null; sf_run_time: string | null; sf_run_day: number | null
+  }
   const { data: rulesRaw, error: rulesError } = await supabase
     .from('scoring_rules')
     .select('*')
