@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { toast } from 'sonner'
-import { getDaysInMonth, periodDateForDay, parseMonthParam } from '@/lib/goals/helpers'
+import { getDaysInMonth, periodDateForDay, parseMonthParam, formatValueCompact } from '@/lib/goals/helpers'
 import type { ParticipantGoalRow } from '@/types/database'
 
 type Participant = { id: string; name: string }
@@ -15,14 +15,6 @@ interface Props {
   decimalPlaces: number
 }
 
-function formatDisplay(value: number | null, valueType: string, decimalPlaces: number): string {
-  if (value === null || value === undefined) return ''
-  const formatted = value.toLocaleString('pt-BR', {
-    minimumFractionDigits: decimalPlaces,
-    maximumFractionDigits: decimalPlaces,
-  })
-  return valueType === 'currency' ? `R$ ${formatted}` : formatted
-}
 
 function parseRaw(raw: string): number | null {
   const cleaned = raw.trim().replace(/R\$\s?/g, '').replace(/\s/g, '')
@@ -34,8 +26,9 @@ function parseRaw(raw: string): number | null {
   return isNaN(num) ? null : num
 }
 
-const CELL_W = 82
-const NAME_W = 200
+const CELL_W = 78
+const NAME_W = 190
+const ROW_H = 40
 const BORDER = '1px solid #e2e4e7'
 const BORDER_HEAVY = '2px solid #d0d3d8'
 
@@ -250,7 +243,7 @@ export function MetasMatrixTab({ ruleId, campaignId, month, participants, valueT
               <tr key={p.id}>
                 <td style={{
                   position: 'sticky', left: 0, zIndex: 2, background: '#fff',
-                  padding: '0 0.75rem', height: 36,
+                  padding: '0 0.75rem', height: ROW_H,
                   fontWeight: 500, fontSize: '0.82rem', color: '#3F3E3E', whiteSpace: 'nowrap',
                   borderTop: BORDER, borderRight: BORDER_HEAVY,
                   overflow: 'hidden', textOverflow: 'ellipsis',
@@ -266,7 +259,7 @@ export function MetasMatrixTab({ ruleId, campaignId, month, participants, valueT
 
                   return (
                     <td key={d} style={{
-                      padding: 0, height: 36,
+                      padding: 0, height: ROW_H,
                       borderTop: BORDER, borderRight: BORDER,
                       background: hasValue ? 'rgba(141,178,60,0.06)' : '#fff',
                       outline: isEditing ? '2px solid #8DB23C' : 'none',
@@ -276,7 +269,7 @@ export function MetasMatrixTab({ ruleId, campaignId, month, participants, valueT
                         ref={el => { cellRefs.current[key] = el }}
                         type="text"
                         inputMode={decimalPlaces > 0 ? 'decimal' : 'numeric'}
-                        value={isEditing ? editText : (hasValue ? formatDisplay(saved, valueType, decimalPlaces) : '')}
+                        value={isEditing ? editText : (hasValue ? formatValueCompact(saved, valueType, decimalPlaces) : '')}
                         placeholder="—"
                         onChange={e => isEditing && setEditText(e.target.value)}
                         onFocus={() => handleFocus(p.id, date)}
@@ -299,7 +292,7 @@ export function MetasMatrixTab({ ruleId, campaignId, month, participants, valueT
                 })}
                 <td style={{
                   borderTop: BORDER, borderLeft: BORDER_HEAVY,
-                  padding: '0 0.5rem', whiteSpace: 'nowrap', textAlign: 'center', height: 36,
+                  padding: '0 0.5rem', whiteSpace: 'nowrap', textAlign: 'center', height: ROW_H,
                 }}>
                   <button onClick={() => handleReplicate(p.id)}
                     title="Replicar para todos os dias do mês"
