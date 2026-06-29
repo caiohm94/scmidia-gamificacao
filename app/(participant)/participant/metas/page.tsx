@@ -1,7 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { requireRole, getSessionUser } from '@/lib/auth/helpers'
 import { GoalProgressBar } from '@/components/participant/GoalProgressBar'
-import { getDaysInMonth, formatValueCompact } from '@/lib/goals/helpers'
+import { MetasCalendar } from '@/components/participant/MetasCalendar'
+import { getDaysInMonth } from '@/lib/goals/helpers'
 
 type GoalWithRule = {
   id: string
@@ -88,70 +89,24 @@ export default async function MetasPage() {
                 decimalPlaces={rule?.decimal_places ?? 0}
               />
 
-              {!isMonthly && (
-                <div>
-                  <p style={{ fontSize: '0.7rem', color: muted, marginBottom: '0.5rem', fontWeight: 500 }}>
-                    Dias do mês
-                  </p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
-                    {days.map(d => {
-                      const dateStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
-                      const g = ruleGoals.find(r => r.period_date === dateStr)
-                      const isFuture = dateStr > today
-                      const isToday = dateStr === today
-                      const achieved = g != null && g.actual_value != null && g.actual_value >= g.target_value
-                      const hasData = g != null && g.actual_value != null
-
-                      let bg = 'rgba(255,255,255,0.06)'
-                      let color = muted
-                      let border = cardBorder
-                      if (!g || isFuture) {
-                        bg = 'rgba(255,255,255,0.03)'; color = 'rgba(255,255,255,0.2)'
-                      } else if (achieved) {
-                        bg = 'rgba(141,178,60,0.2)'; color = '#8DB23C'; border = 'rgba(141,178,60,0.3)'
-                      } else if (hasData) {
-                        bg = 'rgba(249,115,22,0.15)'; color = '#f97316'; border = 'rgba(249,115,22,0.25)'
-                      }
-
-                      const vt = rule?.value_type ?? 'number'
-                      const dp = rule?.decimal_places ?? 0
-                      const tooltip = g
-                        ? `${formatValueCompact(g.actual_value ?? 0, vt, dp)} / ${formatValueCompact(g.target_value, vt, dp)}`
-                        : undefined
-
-                      return (
-                        <div
-                          key={d}
-                          title={tooltip}
-                          style={{
-                            width: 32, height: 32,
-                            borderRadius: isToday ? '50%' : '0 0.35rem 0.35rem 0.35rem',
-                            background: bg,
-                            border: `1px solid ${isToday ? '#FFDF00' : border}`,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: '0.72rem', fontWeight: isToday ? 700 : 500,
-                            color: isToday ? '#FFDF00' : color,
-                            cursor: tooltip ? 'help' : 'default',
-                          }}
-                        >
-                          {d}
-                        </div>
-                      )
-                    })}
-                  </div>
-                  <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
-                    {[
-                      { color: '#8DB23C', label: 'Bateu a meta' },
-                      { color: '#f97316', label: 'Abaixo da meta' },
-                      { color: 'rgba(255,255,255,0.2)', label: 'Sem meta / futuro' },
-                    ].map(l => (
-                      <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: l.color }} />
-                        <span style={{ fontSize: '0.65rem', color: muted }}>{l.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+              {!isMonthly && rule && (
+                <MetasCalendar
+                  days={days}
+                  goals={ruleGoals.map(g => ({
+                    id: g.id,
+                    actual_value: g.actual_value,
+                    target_value: g.target_value,
+                    period_date: g.period_date,
+                  }))}
+                  year={y}
+                  month={m}
+                  today={today}
+                  rule={{
+                    name: rule.name,
+                    value_type: rule.value_type,
+                    decimal_places: rule.decimal_places,
+                  }}
+                />
               )}
             </div>
           </div>
