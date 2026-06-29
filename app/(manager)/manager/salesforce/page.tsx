@@ -18,28 +18,49 @@ type RecordRow = {
   scoring_rules: { name: string } | null
 }
 
-export default async function SalesforceImportsPage() {
+type Props = { searchParams: Promise<{ from?: string; to?: string; owner?: string; rule_id?: string }> }
+
+export default async function SalesforceImportsPage({ searchParams }: Props) {
   await requireRole('manager')
+  const params = await searchParams
   const supabase = createAdminClient()
 
-  const { data: recordsRaw } = await supabase
+  const { data: rules } = await supabase
+    .from('scoring_rules')
+    .select('id, name')
+    .eq('data_origin', 'salesforce')
+    .eq('is_active', true)
+    .order('name')
+
+  let query = supabase
     .from('salesforce_records')
     .select('id, sf_id, sf_created_at, imported_at, owner_name, sf_alias, account_name, description, user_id, transaction_id, scoring_rules(name)')
-    .order('imported_at', { ascending: false })
+    .order('sf_created_at', { ascending: false })
     .limit(500)
 
+  if (params.from) query = query.gte('sf_created_at', params.from)
+  if (params.to) query = query.lte('sf_created_at', params.to + 'T23:59:59')
+  if (params.owner) query = query.ilike('owner_name', `%${params.owner}%`)
+  if (params.rule_id) query = query.eq('scoring_rule_id', params.rule_id)
+
+  const { data: recordsRaw } = await query
   const records = (recordsRaw ?? []) as unknown as RecordRow[]
 
+  const inputStyle: React.CSSProperties = {
+    border: '1px solid rgba(63,62,62,0.15)', borderRadius: '0 0.4rem 0.4rem 0.4rem',
+    padding: '0.4rem 0.7rem', fontSize: '0.8rem', color: '#3F3E3E', background: '#fff',
+  }
   const thStyle: React.CSSProperties = {
     padding: '0.6rem 1rem', textAlign: 'left', fontSize: '0.72rem',
     fontWeight: 600, color: 'rgba(63,62,62,0.5)',
     borderBottom: '1px solid rgba(63,62,62,0.08)', whiteSpace: 'nowrap',
   }
   const tdStyle: React.CSSProperties = {
-    padding: '0.65rem 1rem', fontSize: '0.78rem', color: '#3F3E3E',
-    borderBottom: '1px solid rgba(63,62,62,0.06)', verticalAlign: 'top',
+    padding: '0.6rem 1rem', fontSize: '0.78rem', color: '#3F3E3E',
+    borderBottom: '1px solid rgba(63,62,62,0.06)', whiteSpace: 'nowrap',
   }
   const dash = <span style={{ color: 'rgba(63,62,62,0.3)' }}>—</span>
+  const hasFilter = params.from || params.to || params.owner || params.rule_id
 
   return (
     <div>
@@ -58,14 +79,40 @@ export default async function SalesforceImportsPage() {
       </div>
 
       <div className="p-6 space-y-4 max-w-7xl">
+        <form method="GET" style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
+          <input
+            type="date" name="from" defaultValue={params.from ?? ''}
+            style={inputStyle} placeholder="Data início"
+          />
+          <input
+            type="date" name="to" defaultValue={params.to ?? ''}
+            style={inputStyle} placeholder="Data fim"
+          />
+          <input
+            type="text" name="owner" defaultValue={params.owner ?? ''}
+            style={{ ...inputStyle, minWidth: 160 }} placeholder="Proprietário"
+          />
+          <select name="rule_id" defaultValue={params.rule_id ?? ''} style={inputStyle}>
+            <option value="">Todas as regras</option>
+            {(rules ?? []).map(r => (
+              <option key={r.id} value={r.id}>{r.name}</option>
+            ))}
+          </select>
+          <button type="submit" style={{ padding: '0.4rem 1rem', fontSize: '0.8rem', background: '#8DB23C', color: '#fff', border: 'none', borderRadius: '0 0.4rem 0.4rem 0.4rem', cursor: 'pointer' }}>
+            Filtrar
+          </button>
+          {hasFilter && (
+            <a href="/manager/salesforce" style={{ padding: '0.4rem 0.9rem', fontSize: '0.8rem', color: 'rgba(63,62,62,0.5)', border: '1px solid rgba(63,62,62,0.15)', borderRadius: '0 0.4rem 0.4rem 0.4rem', textDecoration: 'none' }}>
+              Limpar
+            </a>
+          )}
+        </form>
+
         {records.length === 0 ? (
           <div className="sc-card" style={{ textAlign: 'center', padding: '3rem' }}>
             <CloudDownload size={32} color="rgba(63,62,62,0.2)" style={{ margin: '0 auto 0.75rem' }} />
             <p style={{ fontSize: '0.85rem', color: 'rgba(63,62,62,0.4)' }}>
-              Nenhum registro importado ainda.
-            </p>
-            <p style={{ fontSize: '0.75rem', color: 'rgba(63,62,62,0.3)', marginTop: '0.25rem' }}>
-              Clique em &quot;Sync SF&quot; em uma regra Salesforce para importar.
+              {hasFilter ? 'Nenhum registro encontrado com esses filtros.' : 'Nenhum registro importado ainda.'}
             </p>
           </div>
         ) : (
@@ -100,16 +147,16 @@ export default async function SalesforceImportsPage() {
                           ? <code style={{ fontSize: '0.72rem', background: 'rgba(141,178,60,0.1)', padding: '0.1rem 0.35rem', borderRadius: '0 0.25rem 0.25rem 0.25rem' }}>{r.sf_alias}</code>
                           : dash}
                       </td>
-                      <td style={tdStyle}>{r.account_name ?? dash}</td>
-                      <td style={{ ...tdStyle, maxWidth: 180 }}>
-                        <span style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', fontSize: '0.75rem', color: 'rgba(63,62,62,0.65)' } as React.CSSProperties}>
+                      <td style={{ ...tdStyle, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {r.account_name ?? dash}
+                      </td>
+                      <td style={{ ...tdStyle, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'rgba(63,62,62,0.65)' }}>
                           {r.description ?? dash}
                         </span>
                       </td>
-                      <td style={tdStyle}>
-                        <span style={{ fontSize: '0.72rem', color: 'rgba(63,62,62,0.5)' }}>
-                          {r.scoring_rules?.name ?? dash}
-                        </span>
+                      <td style={{ ...tdStyle, fontSize: '0.72rem', color: 'rgba(63,62,62,0.5)' }}>
+                        {r.scoring_rules?.name ?? dash}
                       </td>
                       <td style={tdStyle}>
                         {r.transaction_id
