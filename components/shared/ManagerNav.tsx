@@ -6,13 +6,12 @@ import { LayoutDashboard, Trophy, Users, Target, History, Upload, BarChart3, Pal
 const navItems = [
   { href: '/manager/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/manager/campaigns', label: 'Campanhas', icon: Trophy },
-  { href: '/manager/users', label: 'Usuários', icon: Users },
   { href: '/manager/points', label: 'Lançar Pontos', icon: Target },
-  { href: '/manager/points/import', label: 'Importar CSV', icon: Upload },
-  { href: '/manager/points/history', label: 'Auditoria', icon: History },
-  { href: '/manager/rankings', label: 'Rankings', icon: BarChart3 },
-  { href: '/manager/themes', label: 'Temas', icon: Palette },
   { href: '/manager/salesforce', label: 'Salesforce', icon: CloudDownload },
+  { href: '/manager/points/import', label: 'Importar CSV', icon: Upload },
+  { href: '/manager/rankings', label: 'Rankings', icon: BarChart3 },
+  { href: '/manager/users', label: 'Usuários', icon: Users },
+  { href: '/manager/themes', label: 'Temas', icon: Palette },
 ]
 
 interface Props { collapsed?: boolean }
