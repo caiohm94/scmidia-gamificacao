@@ -101,9 +101,21 @@ export default async function ParticipantDashboard() {
     }).filter(g => g !== undefined) as GoalWithRule[]
   }
 
-  const cardBg = 'rgba(255,255,255,0.03)'
-  const cardBorder = 'rgba(255,255,255,0.08)'
-  const muted = 'rgba(255,255,255,0.35)'
+  // Fetch participant photo for active campaign
+  let participantPhoto: string | null = user.avatar_url ?? null
+  if (campaign) {
+    const { data: cp } = await supabase
+      .from('campaign_participants')
+      .select('photo_url')
+      .eq('campaign_id', campaign.id)
+      .eq('user_id', user.id)
+      .single()
+    if (cp?.photo_url) participantPhoto = cp.photo_url
+  }
+
+  const cardBg = 'var(--p-card-bg)'
+  const cardBorder = 'var(--p-card-border)'
+  const muted = 'var(--p-muted)'
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -116,7 +128,7 @@ export default async function ParticipantDashboard() {
         flexWrap: 'wrap', gap: '1rem',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-          <Avatar src={user.avatar_url} name={user.name} size={72} />
+          <Avatar src={participantPhoto} name={user.name} size={72} />
           <div>
             <h1 style={{
               fontSize: '1.7rem', fontWeight: 800,
@@ -174,7 +186,7 @@ export default async function ParticipantDashboard() {
       {/* Goals */}
       {todayGoals.length > 0 && (
         <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '0 1rem 1rem 1rem', overflow: 'hidden' }}>
-          <div style={{ padding: '0.75rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ padding: '0.75rem 1.25rem', borderBottom: '1px solid var(--p-sub-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <p style={{ fontWeight: 600, fontSize: '0.82rem', fontFamily: 'var(--font-outfit)', margin: 0 }}>Minhas metas</p>
             <a href="/participant/metas" style={{ fontSize: '0.72rem', color: '#8DB23C', textDecoration: 'none' }}>Ver tudo →</a>
           </div>
@@ -197,16 +209,16 @@ export default async function ParticipantDashboard() {
       {/* Recent points + bonuses */}
       <div style={{ display: 'grid', gridTemplateColumns: earnedBonuses.length > 0 ? '1fr 1fr' : '1fr', gap: '0.75rem' }}>
         <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '0 1rem 1rem 1rem', overflow: 'hidden' }}>
-          <div style={{ padding: '0.75rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ padding: '0.75rem 1.25rem', borderBottom: '1px solid var(--p-sub-border)' }}>
             <p style={{ fontWeight: 600, fontSize: '0.82rem', fontFamily: 'var(--font-outfit)', margin: 0 }}>Últimos pontos</p>
           </div>
           <div>
             {myPoints.length === 0
               ? <p style={{ padding: '1.5rem', textAlign: 'center', color: muted, fontSize: '0.82rem' }}>Nenhum ponto ainda.</p>
               : myPoints.slice(0, 8).map(pt => (
-                  <div key={pt.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.6rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                  <div key={pt.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.6rem 1.25rem', borderBottom: '1px solid var(--p-separator)' }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.85)', margin: 0, fontWeight: 500 }}>
+                      <p style={{ fontSize: '0.82rem', color: 'var(--p-text-dim)', margin: 0, fontWeight: 500 }}>
                         {pt.scoring_rules?.name ?? 'Bônus'}
                       </p>
                       {pt.description && (
@@ -233,12 +245,12 @@ export default async function ParticipantDashboard() {
 
         {earnedBonuses.length > 0 && (
           <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '0 1rem 1rem 1rem', overflow: 'hidden' }}>
-            <div style={{ padding: '0.75rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ padding: '0.75rem 1.25rem', borderBottom: '1px solid var(--p-sub-border)' }}>
               <p style={{ fontWeight: 600, fontSize: '0.82rem', fontFamily: 'var(--font-outfit)', margin: 0 }}>Conquistas</p>
             </div>
             <div style={{ padding: '1rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
               {earnedBonuses.map(ub => (
-                <div key={ub.id} style={{ textAlign: 'center', padding: '0.6rem 0.75rem', borderRadius: '0 0.5rem 0.5rem 0.5rem', background: 'rgba(255,255,255,0.05)', border: `1px solid ${cardBorder}` }}>
+                <div key={ub.id} style={{ textAlign: 'center', padding: '0.6rem 0.75rem', borderRadius: '0 0.5rem 0.5rem 0.5rem', background: 'var(--p-tag-bg)', border: `1px solid ${cardBorder}` }}>
                   <div style={{ fontSize: '1.5rem' }}>{ub.bonuses?.badge_icon}</div>
                   <div style={{ fontSize: '0.65rem', color: muted, marginTop: '0.2rem' }}>{ub.bonuses?.name}</div>
                 </div>

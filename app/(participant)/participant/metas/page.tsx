@@ -42,9 +42,9 @@ export default async function MetasPage() {
     byRule.set(g.scoring_rule_id, arr)
   }
 
-  const cardBg = 'rgba(255,255,255,0.03)'
-  const cardBorder = 'rgba(255,255,255,0.08)'
-  const muted = 'rgba(255,255,255,0.35)'
+  const cardBg = 'var(--p-card-bg)'
+  const cardBorder = 'var(--p-card-border)'
+  const muted = 'var(--p-muted)'
   const days = getDaysInMonth(y, m)
 
   return (
@@ -71,7 +71,7 @@ export default async function MetasPage() {
 
         return (
           <div key={ruleId} style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '0 1rem 1rem 1rem', overflow: 'hidden' }}>
-            <div style={{ padding: '0.85rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ padding: '0.85rem 1.25rem', borderBottom: '1px solid var(--p-sub-border)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <p style={{ fontWeight: 700, fontSize: '0.9rem', fontFamily: 'var(--font-outfit)', margin: 0 }}>
                 {rule?.name ?? 'Meta'}
               </p>

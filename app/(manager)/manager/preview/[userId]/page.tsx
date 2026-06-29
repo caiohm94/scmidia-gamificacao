@@ -103,6 +103,15 @@ export default async function PreviewPage({
       .lte('period_date', monthEnd)
     allPreviewGoals = (goalsRaw ?? []) as GoalWithRule[]
 
+    // Fetch participant photo for the active campaign
+    const { data: cp } = await admin
+      .from('campaign_participants')
+      .select('photo_url')
+      .eq('campaign_id', campaign.id)
+      .eq('user_id', userId)
+      .single()
+    if (cp?.photo_url) user.avatar_url = cp.photo_url
+
     // Mirror participant dashboard: deduplicate by rule, apply is_cumulative aggregation
     const byRuleMap = new Map<string, GoalWithRule[]>()
     for (const g of allPreviewGoals) {

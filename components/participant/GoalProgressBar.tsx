@@ -27,23 +27,19 @@ export function GoalProgressBar({ label, actual, target, valueType, decimalPlace
     return () => cancelAnimationFrame(raf)
   }, [pct])
 
-  const barColor = achieved
-    ? '#8DB23C'
-    : pct >= 70
-    ? '#FFDF00'
-    : 'rgba(255,255,255,0.35)'
+  const barColor = achieved ? '#8DB23C' : pct >= 70 ? '#FFDF00' : 'var(--p-track)'
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-          <span style={{ fontSize: '0.82rem', fontWeight: 500, color: 'rgba(255,255,255,0.85)' }}>
+          <span style={{ fontSize: '0.82rem', fontWeight: 500, color: 'var(--p-text-dim)' }}>
             {label}
           </span>
           {periodLabel && (
             <span style={{
-              fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)',
-              background: 'rgba(255,255,255,0.06)', padding: '0.1rem 0.35rem', borderRadius: '0.2rem',
+              fontSize: '0.65rem', color: 'var(--p-muted)',
+              background: 'var(--p-tag-bg)', padding: '0.1rem 0.35rem', borderRadius: '0.2rem',
             }}>
               {periodLabel}
             </span>
@@ -52,14 +48,14 @@ export function GoalProgressBar({ label, actual, target, valueType, decimalPlace
         </div>
         <span style={{
           fontSize: '0.78rem', fontWeight: 600, fontFamily: 'var(--font-outfit)',
-          color: achieved ? '#8DB23C' : 'rgba(255,255,255,0.6)',
+          color: achieved ? '#8DB23C' : 'var(--p-muted)',
         }}>
           {formatValueCompact(actual ?? 0, valueType, decimalPlaces)}
           {' / '}
           {formatValueCompact(target, valueType, decimalPlaces)}
         </span>
       </div>
-      <div style={{ height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+      <div style={{ height: 6, borderRadius: 3, background: 'var(--p-track)', overflow: 'hidden' }}>
         <div ref={barRef} style={{ height: '100%', borderRadius: 3, background: barColor, width: '0%' }} />
       </div>
     </div>

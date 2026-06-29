@@ -27,8 +27,8 @@ interface Props {
 export function MetasCalendar({ days, goals, year, month, today, rule }: Props) {
   const [selectedDay, setSelectedDay] = useState<number | null>(null)
 
-  const muted = 'rgba(255,255,255,0.35)'
-  const cardBorder = 'rgba(255,255,255,0.08)'
+  const muted = 'var(--p-muted)'
+  const cardBorder = 'var(--p-card-border)'
   const vt = rule.value_type
   const dp = rule.decimal_places
 
@@ -129,7 +129,7 @@ export function MetasCalendar({ days, goals, year, month, today, rule }: Props) 
       {/* Day detail panel */}
       {selectedDay != null && (
         <div style={{
-          background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,223,0,0.25)',
+          background: 'var(--p-card-bg)', border: '1px solid rgba(255,223,0,0.25)',
           borderRadius: '0 0.75rem 0.75rem 0.75rem', padding: '1rem 1.25rem',
           display: 'flex', flexDirection: 'column', gap: '0.9rem',
           animation: 'fadeSlideIn 0.18s ease',
@@ -154,13 +154,13 @@ export function MetasCalendar({ days, goals, year, month, today, rule }: Props) 
             <>
               {/* Big values */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.6rem', textAlign: 'center' }}>
-                <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '0 0.5rem 0.5rem 0.5rem', padding: '0.6rem' }}>
+                <div style={{ background: 'var(--p-card-bg)', borderRadius: '0 0.5rem 0.5rem 0.5rem', padding: '0.6rem' }}>
                   <p style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, fontFamily: 'var(--font-outfit)', color: selectedAchieved ? '#8DB23C' : '#f97316' }}>
                     {formatValueCompact(selectedGoal.actual_value ?? 0, vt, dp)}
                   </p>
                   <p style={{ margin: 0, fontSize: '0.65rem', color: muted }}>realizado</p>
                 </div>
-                <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '0 0.5rem 0.5rem 0.5rem', padding: '0.6rem' }}>
+                <div style={{ background: 'var(--p-card-bg)', borderRadius: '0 0.5rem 0.5rem 0.5rem', padding: '0.6rem' }}>
                   <p style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, fontFamily: 'var(--font-outfit)', color: 'rgba(255,255,255,0.6)' }}>
                     {formatValueCompact(selectedGoal.target_value, vt, dp)}
                   </p>
@@ -176,7 +176,7 @@ export function MetasCalendar({ days, goals, year, month, today, rule }: Props) 
 
               {/* Progress bar */}
               <div>
-                <div style={{ height: 10, borderRadius: 5, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+                <div style={{ height: 10, borderRadius: 5, background: 'var(--p-track)', overflow: 'hidden' }}>
                   <div style={{
                     height: '100%', borderRadius: 5,
                     width: `${selectedPct}%`,

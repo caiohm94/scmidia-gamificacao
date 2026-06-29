@@ -28,9 +28,9 @@ export default async function HistoryPage() {
 
   const points = (rawPoints ?? []) as HistoryRow[]
 
-  const cardBg = 'rgba(255,255,255,0.03)'
-  const cardBorder = 'rgba(255,255,255,0.08)'
-  const muted = 'rgba(255,255,255,0.35)'
+  const cardBg = 'var(--p-card-bg)'
+  const cardBorder = 'var(--p-card-border)'
+  const muted = 'var(--p-muted)'
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -52,7 +52,7 @@ export default async function HistoryPage() {
               display: 'flex', alignItems: 'center', gap: '1rem',
               padding: '0.85rem 1.25rem',
               borderRadius: '0 0.75rem 0.75rem 0.75rem',
-              background: pt.status === 'reversed' ? 'rgba(255,255,255,0.01)' : cardBg,
+              background: cardBg,
               border: `1px solid ${cardBorder}`,
               opacity: pt.status === 'reversed' ? 0.45 : 1,
             }}
@@ -70,7 +70,7 @@ export default async function HistoryPage() {
 
             {/* Content */}
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ margin: 0, fontWeight: 600, fontSize: '0.88rem', color: 'rgba(255,255,255,0.9)' }}>
+              <p style={{ margin: 0, fontWeight: 600, fontSize: '0.88rem', color: 'var(--p-text)' }}>
                 {pt.scoring_rules?.name ?? 'Bônus'}
               </p>
               {pt.description && (
@@ -80,11 +80,11 @@ export default async function HistoryPage() {
               )}
               <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.2rem', flexWrap: 'wrap' }}>
                 {pt.campaigns?.name && (
-                  <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.25)', background: 'rgba(255,255,255,0.05)', padding: '0.05rem 0.35rem', borderRadius: '0.2rem' }}>
+                  <span style={{ fontSize: '0.65rem', color: 'var(--p-muted)', background: 'var(--p-tag-bg)', padding: '0.05rem 0.35rem', borderRadius: '0.2rem' }}>
                     {pt.campaigns.name}
                   </span>
                 )}
-                <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.2)' }}>
+                <span style={{ fontSize: '0.65rem', color: 'var(--p-muted)' }}>
                   {pt.origin === 'salesforce' ? 'Salesforce' : pt.origin === 'manual' ? 'Manual' : pt.origin}
                 </span>
                 {pt.status === 'reversed' && (
@@ -95,7 +95,7 @@ export default async function HistoryPage() {
 
             {/* Date */}
             <div style={{ textAlign: 'right', flexShrink: 0 }}>
-              <p style={{ margin: 0, fontSize: '0.78rem', fontWeight: 600, color: 'rgba(255,255,255,0.6)' }}>
+              <p style={{ margin: 0, fontSize: '0.78rem', fontWeight: 600, color: 'var(--p-text-dim)' }}>
                 {format(new Date(pt.event_date), 'dd/MM')}
               </p>
               <p style={{ margin: 0, fontSize: '0.65rem', color: muted }}>
