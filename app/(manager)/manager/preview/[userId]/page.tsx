@@ -8,7 +8,8 @@ import { RankingTable } from '@/components/game/RankingTable'
 import { FeedItem } from '@/components/game/FeedItem'
 import { AnimatedCounter } from '@/components/participant/AnimatedCounter'
 import { GoalProgressBar } from '@/components/participant/GoalProgressBar'
-import { getDaysInMonth, formatValueCompact } from '@/lib/goals/helpers'
+import { MetasCalendar } from '@/components/participant/MetasCalendar'
+import { getDaysInMonth } from '@/lib/goals/helpers'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import Image from 'next/image'
@@ -19,7 +20,7 @@ type PointWithRule = { id: string; points: number; event_date: string; created_a
 type FeedEvent = { id: string; event_type: string; payload: Record<string, unknown>; created_at: string; user_id: string }
 type LevelEntry = { id: string; name: string; badge_icon: string; color: string; min_points: number }
 type BonusEntry = { id: string; bonuses: { name: string; badge_icon: string } | null }
-type GoalWithRule = { id: string; scoring_rule_id: string; actual_value: number | null; target_value: number; period_date: string; scoring_rules: { name: string; value_type: string; decimal_places: number; target_period: string | null } | null }
+type GoalWithRule = { id: string; scoring_rule_id: string; actual_value: number | null; target_value: number; period_date: string; scoring_rules: { name: string; value_type: string; decimal_places: number; target_period: string | null; is_cumulative: boolean } | null }
 
 const NAV_TABS = [
   { key: 'painel', label: 'Painel' },
@@ -95,21 +96,40 @@ export default async function PreviewPage({
     const monthEnd = `${gy}-${String(gm).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
     const { data: goalsRaw } = await admin
       .from('participant_goals')
-      .select('id, scoring_rule_id, actual_value, target_value, period_date, scoring_rules(name, value_type, decimal_places, target_period)')
+      .select('id, scoring_rule_id, actual_value, target_value, period_date, scoring_rules(name, value_type, decimal_places, target_period, is_cumulative)')
       .eq('user_id', userId)
       .gte('period_date', monthStart)
       .lte('period_date', monthEnd)
     allPreviewGoals = (goalsRaw ?? []) as GoalWithRule[]
-    todayPreviewGoals = allPreviewGoals.filter(g =>
-      g.scoring_rules?.target_period === 'monthly'
-        ? g.period_date === monthStart
-        : g.period_date === todayStr
-    )
+
+    // Mirror participant dashboard: deduplicate by rule, apply is_cumulative aggregation
+    const byRuleMap = new Map<string, GoalWithRule[]>()
+    for (const g of allPreviewGoals) {
+      const arr = byRuleMap.get(g.scoring_rule_id) ?? []
+      arr.push(g)
+      byRuleMap.set(g.scoring_rule_id, arr)
+    }
+    todayPreviewGoals = [...byRuleMap.entries()].map(([, entries]) => {
+      const rule = entries[0].scoring_rules
+      if (rule?.is_cumulative) {
+        const totalActual = entries.reduce((s, g) => s + (g.actual_value ?? 0), 0)
+        const totalTarget = entries.reduce((s, g) => s + g.target_value, 0)
+        return { ...entries[0], actual_value: totalActual, target_value: totalTarget, period_date: monthStart }
+      }
+      if (rule?.target_period === 'monthly') {
+        return entries.find(g => g.period_date === monthStart) ?? entries[0]
+      }
+      return entries.find(g => g.period_date === todayStr) ?? entries[0]
+    }).filter(Boolean) as GoalWithRule[]
   }
 
-  // --- FEED data ---
+  // --- FEED data — filtered to this user only (mirror participant feed) ---
   const { data: feedEvents } = await admin
-    .from('feed_events').select('*').order('created_at', { ascending: false }).limit(50)
+    .from('feed_events')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(50)
 
   const bg = '#0d1a0f'
   const border = 'rgba(255,255,255,0.07)'
@@ -209,7 +229,15 @@ export default async function PreviewPage({
                 </div>
                 <div style={{ padding: '1rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                   {todayPreviewGoals.map(g => (
-                    <GoalProgressBar key={g.id} label={g.scoring_rules?.name ?? 'Meta'} actual={g.actual_value} target={g.target_value} valueType={g.scoring_rules?.value_type ?? 'number'} decimalPlaces={g.scoring_rules?.decimal_places ?? 0} periodLabel={g.scoring_rules?.target_period === 'monthly' ? 'Mensal' : 'Hoje'} />
+                    <GoalProgressBar
+                      key={g.id}
+                      label={g.scoring_rules?.name ?? 'Meta'}
+                      actual={g.actual_value}
+                      target={g.target_value}
+                      valueType={g.scoring_rules?.value_type ?? 'number'}
+                      decimalPlaces={g.scoring_rules?.decimal_places ?? 0}
+                      periodLabel={g.scoring_rules?.is_cumulative ? 'Acumulado' : g.scoring_rules?.target_period === 'monthly' ? 'Mensal' : 'Hoje'}
+                    />
                   ))}
                 </div>
               </div>
@@ -225,10 +253,21 @@ export default async function PreviewPage({
                   {myPoints.length === 0
                     ? <p style={{ padding: '1.5rem', textAlign: 'center', color: muted, fontSize: '0.82rem' }}>Nenhum ponto ainda.</p>
                     : myPoints.slice(0, 8).map(pt => (
-                        <div key={pt.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.55rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                          <span style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.8)', flex: 1 }}>{pt.scoring_rules?.name ?? 'Bônus'}</span>
-                          <span style={{ fontSize: '0.7rem', color: muted, marginRight: '0.75rem' }}>{format(new Date(pt.event_date), 'dd/MM', { locale: ptBR })}</span>
-                          <span style={{ fontSize: '0.8rem', fontWeight: 700, padding: '0.1rem 0.5rem', borderRadius: '0 0.25rem 0.25rem 0.25rem', background: pt.points > 0 ? 'rgba(141,178,60,0.18)' : 'rgba(220,53,69,0.15)', color: pt.points > 0 ? '#8DB23C' : '#f87171' }}>
+                        <div key={pt.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.6rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.85)', margin: 0, fontWeight: 500 }}>
+                              {pt.scoring_rules?.name ?? 'Bônus'}
+                            </p>
+                            {pt.description && (
+                              <p style={{ fontSize: '0.68rem', color: muted, margin: 0, marginTop: '0.1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {pt.description.replace(/^SF Import — [^(]+/, '').replace(/^\s*—\s*/, '').replace(/\(|\)/g, '').trim() || pt.description}
+                              </p>
+                            )}
+                          </div>
+                          <span style={{ fontSize: '0.7rem', color: muted, whiteSpace: 'nowrap' }}>
+                            {format(new Date(pt.event_date), 'dd/MM', { locale: ptBR })}
+                          </span>
+                          <span style={{ fontSize: '0.8rem', fontWeight: 700, padding: '0.1rem 0.5rem', borderRadius: '0 0.25rem 0.25rem 0.25rem', whiteSpace: 'nowrap', background: pt.points > 0 ? 'rgba(141,178,60,0.18)' : 'rgba(220,53,69,0.15)', color: pt.points > 0 ? '#8DB23C' : '#f87171' }}>
                             {pt.points > 0 ? '+' : ''}{pt.points}
                           </span>
                         </div>
@@ -262,8 +301,8 @@ export default async function PreviewPage({
             arr.push(g)
             byRule.set(g.scoring_rule_id, arr)
           }
-          const todayStr2 = new Date().toISOString().slice(0, 10)
-          const days2 = getDaysInMonth(previewYear, previewMonth)
+          const days = getDaysInMonth(previewYear, previewMonth)
+          const todayStr = new Date().toISOString().slice(0, 10)
           const monthLabel = previewYear > 0
             ? new Date(previewYear, previewMonth - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
             : ''
@@ -300,40 +339,24 @@ export default async function PreviewPage({
                         valueType={rule?.value_type ?? 'number'}
                         decimalPlaces={rule?.decimal_places ?? 0}
                       />
-                      {!isMonthly && (
-                        <div>
-                          <p style={{ fontSize: '0.7rem', color: muted, marginBottom: '0.5rem', fontWeight: 500 }}>Dias do mês</p>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
-                            {days2.map(d => {
-                              const dateStr = `${previewYear}-${String(previewMonth).padStart(2, '0')}-${String(d).padStart(2, '0')}`
-                              const g = ruleGoals.find(r => r.period_date === dateStr)
-                              const isFuture = dateStr > todayStr2
-                              const isToday = dateStr === todayStr2
-                              const achieved = g != null && g.actual_value != null && g.actual_value >= g.target_value
-                              const hasData = g != null && g.actual_value != null
-                              let bg2 = 'rgba(255,255,255,0.06)', color2 = muted, border2 = cardBorder
-                              if (!g || isFuture) { bg2 = 'rgba(255,255,255,0.03)'; color2 = 'rgba(255,255,255,0.2)' }
-                              else if (achieved) { bg2 = 'rgba(141,178,60,0.2)'; color2 = '#8DB23C'; border2 = 'rgba(141,178,60,0.3)' }
-                              else if (hasData) { bg2 = 'rgba(249,115,22,0.15)'; color2 = '#f97316'; border2 = 'rgba(249,115,22,0.25)' }
-                              const vt = rule?.value_type ?? 'number'
-                              const dp = rule?.decimal_places ?? 0
-                              return (
-                                <div key={d} title={g ? `${formatValueCompact(g.actual_value ?? 0, vt, dp)} / ${formatValueCompact(g.target_value, vt, dp)}` : undefined}
-                                  style={{ width: 32, height: 32, borderRadius: isToday ? '50%' : '0 0.35rem 0.35rem 0.35rem', background: bg2, border: `1px solid ${isToday ? '#FFDF00' : border2}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: isToday ? 700 : 500, color: isToday ? '#FFDF00' : color2 }}>
-                                  {d}
-                                </div>
-                              )
-                            })}
-                          </div>
-                          <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
-                            {[{ color: '#8DB23C', label: 'Bateu a meta' }, { color: '#f97316', label: 'Abaixo da meta' }, { color: 'rgba(255,255,255,0.2)', label: 'Sem meta / futuro' }].map(l => (
-                              <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                                <div style={{ width: 8, height: 8, borderRadius: '50%', background: l.color }} />
-                                <span style={{ fontSize: '0.65rem', color: muted }}>{l.label}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
+                      {!isMonthly && rule && (
+                        <MetasCalendar
+                          days={days}
+                          goals={ruleGoals.map(g => ({
+                            id: g.id,
+                            actual_value: g.actual_value,
+                            target_value: g.target_value,
+                            period_date: g.period_date,
+                          }))}
+                          year={previewYear}
+                          month={previewMonth}
+                          today={todayStr}
+                          rule={{
+                            name: rule.name,
+                            value_type: rule.value_type,
+                            decimal_places: rule.decimal_places,
+                          }}
+                        />
                       )}
                     </div>
                   </div>
@@ -361,17 +384,21 @@ export default async function PreviewPage({
               ? <p style={{ color: muted, textAlign: 'center', padding: '3rem' }}>Nenhum ponto ainda.</p>
               : myPoints.map(pt => (
                   <div key={pt.id} style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem',
                     padding: '1rem', borderRadius: '0 0.75rem 0.75rem 0.75rem',
                     background: cardBg, border: `1px solid ${cardBorder}`,
                     opacity: pt.status === 'reversed' ? 0.45 : 1,
                   }}>
-                    <div>
-                      <p style={{ fontWeight: 500, fontSize: '0.9rem' }}>{pt.scoring_rules?.name ?? 'Bônus'}</p>
-                      <p style={{ fontSize: '0.72rem', color: muted, marginTop: '0.15rem' }}>{pt.campaigns?.name}</p>
-                      {pt.description && <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)', marginTop: '0.1rem' }}>{pt.description}</p>}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontWeight: 500, fontSize: '0.9rem', margin: 0 }}>{pt.scoring_rules?.name ?? 'Bônus'}</p>
+                      {pt.description && (
+                        <p style={{ fontSize: '0.72rem', color: muted, marginTop: '0.15rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {pt.description.replace(/^SF Import — [^(]+/, '').replace(/^\s*—\s*/, '').replace(/\(|\)/g, '').trim() || pt.description}
+                        </p>
+                      )}
+                      <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.25)', marginTop: '0.1rem' }}>{pt.campaigns?.name}</p>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
                       <span style={{
                         display: 'inline-block', padding: '0.2rem 0.6rem', fontSize: '0.85rem', fontWeight: 700,
                         borderRadius: '0 0.35rem 0.35rem 0.35rem',
@@ -393,7 +420,7 @@ export default async function PreviewPage({
         {/* ---- FEED ---- */}
         {tab === 'feed' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <h1 style={{ fontSize: '1.5rem', fontWeight: 800, fontFamily: 'var(--font-outfit)' }}>Feed ao Vivo 📡</h1>
+            <h1 style={{ fontSize: '1.5rem', fontWeight: 800, fontFamily: 'var(--font-outfit)' }}>Minhas Atividades 📡</h1>
             {(feedEvents ?? []).length === 0
               ? <p style={{ color: muted, textAlign: 'center', padding: '3rem' }}>Nenhuma atividade ainda.</p>
               : (feedEvents ?? [] as FeedEvent[]).map((e) => <FeedItem key={e.id} event={e as FeedEvent} />)}
