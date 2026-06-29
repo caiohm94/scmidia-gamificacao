@@ -153,15 +153,20 @@ export function EditRuleButton({ campaignId, rule }: Props) {
               <select value={form.value_type} onChange={e => setForm(f => ({ ...f, value_type: e.target.value }))} style={{ ...inputStyle, cursor: 'pointer' }}>
                 <option value="number">Número</option>
                 <option value="currency">Monetário (R$)</option>
+                <option value="percentage">Percentual (%)</option>
               </select>
             </div>
             <div>
               <label style={labelStyle}>Casas decimais</label>
-              <select value={form.decimal_places} onChange={e => setForm(f => ({ ...f, decimal_places: e.target.value }))} style={{ ...inputStyle, cursor: 'pointer' }}>
-                <option value="0">0 — inteiro</option>
-                <option value="1">1 — ex: 1,5</option>
-                <option value="2">2 — ex: 1,50</option>
-              </select>
+              <input
+                type="number"
+                min="0"
+                max="4"
+                value={form.decimal_places}
+                onChange={e => setForm(f => ({ ...f, decimal_places: e.target.value }))}
+                style={inputStyle}
+                placeholder="0"
+              />
             </div>
           </div>
 
