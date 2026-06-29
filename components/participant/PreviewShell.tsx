@@ -7,33 +7,30 @@ const THEMES = {
 }
 type ThemeKey = keyof typeof THEMES
 
-export function ThemeWrapper({ children, headerContent }: { children: React.ReactNode; headerContent: React.ReactNode }) {
+export function PreviewShell({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<ThemeKey>('padrao')
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     const saved = (localStorage.getItem('participant_theme') ?? 'padrao') as ThemeKey
     if (saved in THEMES) setTheme(saved)
+    setMounted(true)
   }, [])
 
-  function toggle() {
-    const next: ThemeKey = theme === 'padrao' ? 'black' : 'padrao'
-    setTheme(next)
-    localStorage.setItem('participant_theme', next)
+  function pick(key: ThemeKey) {
+    setTheme(key)
+    localStorage.setItem('participant_theme', key)
   }
 
   const t = THEMES[theme]
 
   return (
-    <div style={{ minHeight: '100vh', background: t.bg, color: '#ffffff', transition: 'background 0.3s' }}>
-      <header style={{ borderBottom: '1px solid rgba(255,255,255,0.07)', padding: '0 1.5rem', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 50, background: t.headerBg, backdropFilter: 'blur(8px)', transition: 'background 0.3s' }}>
-        {headerContent}
-      </header>
-
-      {/* Floating theme toggle — bottom-right, always visible */}
+    <div style={{ minHeight: '100vh', background: mounted ? t.bg : '#0d1a0f', color: '#fff', transition: 'background 0.3s' }}>
+      {/* Tema toggle — flutuante no canto superior direito da área do conteúdo */}
       <div style={{
         position: 'fixed', bottom: '1.25rem', right: '1.25rem', zIndex: 200,
-        display: 'flex', alignItems: 'center',
-        background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)',
+        display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.07)',
+        border: '1px solid rgba(255,255,255,0.12)',
         borderRadius: '0 0.5rem 0.5rem 0.5rem', padding: '0.2rem', gap: '0.1rem',
         backdropFilter: 'blur(8px)',
       }}>
@@ -41,7 +38,7 @@ export function ThemeWrapper({ children, headerContent }: { children: React.Reac
         {(Object.keys(THEMES) as ThemeKey[]).map(key => (
           <button
             key={key}
-            onClick={() => { setTheme(key); localStorage.setItem('participant_theme', key) }}
+            onClick={() => pick(key)}
             style={{
               fontSize: '0.72rem', fontWeight: theme === key ? 600 : 400,
               color: theme === key ? '#fff' : 'rgba(255,255,255,0.35)',
@@ -55,10 +52,7 @@ export function ThemeWrapper({ children, headerContent }: { children: React.Reac
           </button>
         ))}
       </div>
-
-      <main style={{ maxWidth: '64rem', margin: '0 auto', padding: '1.5rem' }}>
-        {children}
-      </main>
+      {children}
     </div>
   )
 }

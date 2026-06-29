@@ -9,6 +9,7 @@ import { FeedItem } from '@/components/game/FeedItem'
 import { AnimatedCounter } from '@/components/participant/AnimatedCounter'
 import { GoalProgressBar } from '@/components/participant/GoalProgressBar'
 import { MetasCalendar } from '@/components/participant/MetasCalendar'
+import { PreviewShell } from '@/components/participant/PreviewShell'
 import { getDaysInMonth } from '@/lib/goals/helpers'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -142,7 +143,7 @@ export default async function PreviewPage({
   }
 
   return (
-    <div style={{ background: bg, minHeight: '100vh', color: '#fff' }}>
+    <PreviewShell>
 
       {/* Manager banner */}
       <div style={{ background: 'rgba(141,178,60,0.15)', borderBottom: '1px solid rgba(141,178,60,0.3)', padding: '0.4rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -454,6 +455,6 @@ export default async function PreviewPage({
         )}
 
       </main>
-    </div>
+    </PreviewShell>
   )
 }
