@@ -196,12 +196,7 @@ export function MetasMatrixTab({ ruleId, campaignId, month, participants, valueT
         <p style={{ fontSize: '0.7rem', color: '#8DB23C', marginBottom: '0.3rem' }}>Salvando...</p>
       )}
       <div style={{ overflowX: 'auto', border: BORDER, borderRadius: '0.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-        <table style={{ borderCollapse: 'collapse', fontSize: '0.8rem', tableLayout: 'fixed' }}>
-          <colgroup>
-            <col style={{ width: NAME_W }} />
-            {days.map(d => <col key={d} style={{ width: CELL_W }} />)}
-            <col style={{ width: 136 }} />
-          </colgroup>
+        <table style={{ borderCollapse: 'collapse', fontSize: '0.8rem', tableLayout: 'auto' }}>
           <thead>
             <tr style={{ background: '#f8f9fa' }}>
               <th style={{
@@ -210,15 +205,17 @@ export function MetasMatrixTab({ ruleId, campaignId, month, participants, valueT
                 fontFamily: 'var(--font-outfit)', fontWeight: 600, fontSize: '0.72rem',
                 color: 'rgba(63,62,62,0.55)', letterSpacing: '0.02em', textTransform: 'uppercase',
                 borderBottom: BORDER_HEAVY, borderRight: BORDER_HEAVY,
+                whiteSpace: 'nowrap',
               }}>
                 Participante
               </th>
               {days.map(d => (
                 <th key={d} style={{
-                  padding: '0.5rem 0.25rem', textAlign: 'center',
+                  minWidth: 36, padding: '0.5rem 0.25rem', textAlign: 'center',
                   fontFamily: 'var(--font-outfit)', fontWeight: 600, fontSize: '0.7rem',
                   color: 'rgba(63,62,62,0.5)',
                   borderBottom: BORDER_HEAVY, borderRight: BORDER,
+                  whiteSpace: 'nowrap',
                 }}>
                   {String(d).padStart(2, '0')}
                 </th>
@@ -227,6 +224,7 @@ export function MetasMatrixTab({ ruleId, campaignId, month, participants, valueT
                 padding: '0.5rem 0.5rem', textAlign: 'center', fontSize: '0.7rem',
                 color: 'rgba(63,62,62,0.4)', fontFamily: 'var(--font-outfit)', fontWeight: 500,
                 borderBottom: BORDER_HEAVY, borderLeft: BORDER_HEAVY,
+                whiteSpace: 'nowrap',
               }}>
                 Ações
               </th>
@@ -246,7 +244,6 @@ export function MetasMatrixTab({ ruleId, campaignId, month, participants, valueT
                   padding: '0 0.75rem', height: ROW_H,
                   fontWeight: 500, fontSize: '0.82rem', color: '#3F3E3E', whiteSpace: 'nowrap',
                   borderTop: BORDER, borderRight: BORDER_HEAVY,
-                  overflow: 'hidden', textOverflow: 'ellipsis',
                 }}>
                   {p.name}
                 </td>
@@ -256,37 +253,46 @@ export function MetasMatrixTab({ ruleId, campaignId, month, participants, valueT
                   const isEditing = editingKey === key
                   const saved = savedValues[key]
                   const hasValue = saved !== undefined
+                  const displayText = hasValue ? formatValueCompact(saved, valueType, decimalPlaces) : '—'
 
                   return (
                     <td key={d} style={{
-                      padding: 0, height: ROW_H,
+                      padding: 0,
                       borderTop: BORDER, borderRight: BORDER,
                       background: hasValue ? 'rgba(141,178,60,0.06)' : '#fff',
                       outline: isEditing ? '2px solid #8DB23C' : 'none',
                       outlineOffset: -2,
                     }}>
-                      <input
-                        ref={el => { cellRefs.current[key] = el }}
-                        type="text"
-                        inputMode={decimalPlaces > 0 ? 'decimal' : 'numeric'}
-                        value={isEditing ? editText : (hasValue ? formatValueCompact(saved, valueType, decimalPlaces) : '')}
-                        placeholder="—"
-                        onChange={e => isEditing && setEditText(e.target.value)}
-                        onFocus={() => handleFocus(p.id, date)}
-                        onBlur={() => handleBlurSave(p.id, date)}
-                        onKeyDown={e => handleKeyDown(e, pi, di)}
-                        onPaste={e => handlePaste(e, pi, di)}
-                        style={{
-                          width: '100%', height: '100%', boxSizing: 'border-box',
-                          border: 'none', outline: 'none', background: 'transparent',
-                          padding: '0 0.5rem',
-                          fontSize: '0.78rem', textAlign: 'right',
-                          color: hasValue ? '#3F3E3E' : 'rgba(63,62,62,0.2)',
-                          cursor: 'cell',
-                          fontFamily: 'var(--font-outfit, sans-serif)',
-                          caretColor: '#8DB23C',
-                        }}
-                      />
+                      {/* label wraps span + input in a grid so span drives column width */}
+                      <label style={{ display: 'grid', height: ROW_H, cursor: 'cell' }}>
+                        <span style={{
+                          gridArea: '1/1', visibility: 'hidden', pointerEvents: 'none',
+                          padding: '0 0.6rem', fontSize: '0.78rem', whiteSpace: 'nowrap',
+                          fontFamily: 'var(--font-outfit, sans-serif)', alignSelf: 'center',
+                        }}>
+                          {isEditing ? (editText || '0') : displayText}
+                        </span>
+                        <input
+                          ref={el => { cellRefs.current[key] = el }}
+                          type="text"
+                          inputMode={decimalPlaces > 0 ? 'decimal' : 'numeric'}
+                          value={isEditing ? editText : (hasValue ? displayText : '')}
+                          placeholder="—"
+                          onChange={e => isEditing && setEditText(e.target.value)}
+                          onFocus={() => handleFocus(p.id, date)}
+                          onBlur={() => handleBlurSave(p.id, date)}
+                          onKeyDown={e => handleKeyDown(e, pi, di)}
+                          onPaste={e => handlePaste(e, pi, di)}
+                          style={{
+                            gridArea: '1/1', width: '100%', height: '100%',
+                            border: 'none', outline: 'none', background: 'transparent',
+                            padding: '0 0.6rem', fontSize: '0.78rem', textAlign: 'right',
+                            color: hasValue ? '#3F3E3E' : 'rgba(63,62,62,0.25)',
+                            cursor: 'cell', fontFamily: 'var(--font-outfit, sans-serif)',
+                            caretColor: '#8DB23C',
+                          }}
+                        />
+                      </label>
                     </td>
                   )
                 })}
