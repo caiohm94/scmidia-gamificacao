@@ -8,6 +8,7 @@ export const userSchema = z.object({
   function: z.enum(['internal_seller','external_seller','hunter','manager','auditor']),
   status: z.enum(['active','inactive']),
   sf_alias: z.string().nullable().optional(),
+  avatar_url: z.string().url().nullable().optional(),
 })
 
 export type UserInput = z.infer<typeof userSchema>

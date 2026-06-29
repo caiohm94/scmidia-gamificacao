@@ -21,6 +21,7 @@ interface Rule {
   sf_run_day?: number | null
   value_type?: string | null
   decimal_places?: number | null
+  is_cumulative?: boolean | null
 }
 
 interface Props {
@@ -47,6 +48,7 @@ export function EditRuleButton({ campaignId, rule }: Props) {
     sf_run_day: rule.sf_run_day != null ? String(rule.sf_run_day) : '',
     value_type: rule.value_type ?? 'number',
     decimal_places: String(rule.decimal_places ?? 0),
+    is_cumulative: rule.is_cumulative ?? false,
   })
 
   const isSF = form.data_origin === 'salesforce'
@@ -74,6 +76,7 @@ export function EditRuleButton({ campaignId, rule }: Props) {
       data_origin: form.data_origin,
       value_type: form.value_type,
       decimal_places: parseInt(form.decimal_places) || 0,
+      is_cumulative: form.is_cumulative,
     }
     if (isSF) {
       payload.sf_soql = form.sf_soql || null
@@ -168,6 +171,22 @@ export function EditRuleButton({ campaignId, rule }: Props) {
                 placeholder="0"
               />
             </div>
+          </div>
+
+          {/* Acumulativo */}
+          <div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.82rem', color: '#3F3E3E' }}>
+              <input
+                type="checkbox"
+                checked={form.is_cumulative}
+                onChange={e => setForm(f => ({ ...f, is_cumulative: e.target.checked }))}
+                style={{ width: 15, height: 15, cursor: 'pointer' }}
+              />
+              <span style={{ fontWeight: 500 }}>Acumulativo no período</span>
+              <span style={{ fontSize: '0.7rem', color: 'rgba(63,62,62,0.45)', fontWeight: 400 }}>
+                (ex: qtd. de vendas soma dia a dia)
+              </span>
+            </label>
           </div>
 
           {/* Aplica-se a + Período */}

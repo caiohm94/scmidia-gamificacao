@@ -29,6 +29,7 @@ export function UserForm({ defaultValues, userId, teams = [] }: Props) {
   const [statusVal, setStatusVal] = useState(defaultValues?.status ?? 'active')
   const [teamVal, setTeamVal] = useState(defaultValues?.team_id ?? '')
   const [sfAlias, setSfAlias] = useState(defaultValues?.sf_alias ?? '')
+  const [avatarUrl, setAvatarUrl] = useState(defaultValues?.avatar_url ?? '')
 
   const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } =
     useForm<UserInput>({
@@ -127,6 +128,18 @@ export function UserForm({ defaultValues, userId, teams = [] }: Props) {
           />
           <p style={{ fontSize: '0.68rem', color: 'rgba(63,62,62,0.4)', marginTop: '0.2rem' }}>
             Alias exato do usuário no Salesforce. Usado para mapear resultados da SOQL.
+          </p>
+        </div>
+        <div style={{ marginTop: '0.75rem' }}>
+          <label style={labelStyle}>URL da foto</label>
+          <input
+            value={avatarUrl}
+            onChange={e => { setAvatarUrl(e.target.value); setValue('avatar_url', e.target.value || null) }}
+            style={inputStyle}
+            placeholder="https://..."
+          />
+          <p style={{ fontSize: '0.68rem', color: 'rgba(63,62,62,0.4)', marginTop: '0.2rem' }}>
+            Link direto para a foto do participante (HTTPS).
           </p>
         </div>
       </div>

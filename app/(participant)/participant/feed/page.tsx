@@ -5,33 +5,49 @@ import { FeedItem } from '@/components/game/FeedItem'
 
 export default function FeedPage() {
   const [events, setEvents] = useState<any[]>([])
+  const [ready, setReady] = useState(false)
   const supabase = createClient()
 
   useEffect(() => {
-    // Initial load
-    supabase.from('feed_events').select('*').order('created_at', { ascending: false }).limit(50)
-      .then(({ data }) => setEvents(data ?? []))
+    supabase.auth.getUser().then(({ data }) => {
+      const uid = data.user?.id
+      if (!uid) { setReady(true); return }
 
-    // Realtime subscription
-    const channel = supabase.channel('feed')
-      .on('postgres_changes', {
-        event: 'INSERT', schema: 'public', table: 'feed_events'
-      }, payload => {
-        setEvents(prev => [payload.new as any, ...prev.slice(0, 49)])
-      })
-      .subscribe()
+      supabase
+        .from('feed_events')
+        .select('*')
+        .eq('user_id', uid)
+        .order('created_at', { ascending: false })
+        .limit(50)
+        .then(({ data: rows }) => { setEvents(rows ?? []); setReady(true) })
 
-    return () => { supabase.removeChannel(channel) }
+      const channel = supabase.channel('feed-user')
+        .on('postgres_changes', {
+          event: 'INSERT', schema: 'public', table: 'feed_events',
+          filter: `user_id=eq.${uid}`,
+        }, payload => {
+          setEvents(prev => [payload.new as any, ...prev.slice(0, 49)])
+        })
+        .subscribe()
+
+      return () => { supabase.removeChannel(channel) }
+    })
   }, [])
 
+  const muted = 'rgba(255,255,255,0.35)'
+
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Feed ao Vivo 📡</h1>
-      <div className="space-y-2">
-        {events.map(e => <FeedItem key={e.id} event={e} />)}
-        {events.length === 0 && (
-          <p className="text-gray-400 text-center py-8">Nenhuma atividade ainda. Seja o primeiro! ⚽</p>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      <h1 style={{ fontSize: '1.5rem', fontWeight: 800, fontFamily: 'var(--font-outfit)', margin: 0 }}>
+        Minhas Atividades 📡
+      </h1>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        {ready && events.length === 0 && (
+          <p style={{ color: muted, textAlign: 'center', padding: '3rem', fontSize: '0.85rem' }}>
+            Nenhuma atividade ainda. Seja o primeiro! ⚽
+          </p>
         )}
+        {events.map(e => <FeedItem key={e.id} event={e} />)}
       </div>
     </div>
   )

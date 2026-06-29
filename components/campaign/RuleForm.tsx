@@ -36,6 +36,7 @@ export function RuleForm({ campaignId }: Props) {
     sf_run_day: '',
     value_type: 'number',
     decimal_places: '0',
+    is_cumulative: false,
   })
 
   function resetForm() {
@@ -44,7 +45,7 @@ export function RuleForm({ campaignId }: Props) {
       target_value: '', target_period: '',
       data_origin: 'manual', sf_soql: '', sf_alias_field: 'Owner.Alias',
       sf_frequency: '', sf_run_time: '', sf_run_day: '',
-      value_type: 'number', decimal_places: '0',
+      value_type: 'number', decimal_places: '0', is_cumulative: false,
     })
   }
 
@@ -68,6 +69,7 @@ export function RuleForm({ campaignId }: Props) {
       sf_run_day: isSf && form.sf_run_day !== '' ? parseInt(form.sf_run_day) : undefined,
       value_type: form.value_type,
       decimal_places: parseInt(form.decimal_places) || 0,
+      is_cumulative: form.is_cumulative,
     }
     const res = await fetch(`/api/campaigns/${campaignId}/rules`, {
       method: 'POST',
@@ -133,6 +135,20 @@ export function RuleForm({ campaignId }: Props) {
             onChange={e => setForm(f => ({ ...f, decimal_places: e.target.value }))}
             placeholder="0"
           />
+        </div>
+        <div className="space-y-1 col-span-2">
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
+            <input
+              type="checkbox"
+              checked={form.is_cumulative}
+              onChange={e => setForm(f => ({ ...f, is_cumulative: e.target.checked }))}
+              style={{ width: 15, height: 15, cursor: 'pointer' }}
+            />
+            <span style={{ fontWeight: 500 }}>Acumulativo no período</span>
+            <span style={{ fontSize: '0.72rem', color: '#888', fontWeight: 400 }}>
+              (ex: qtd. de vendas soma dia a dia — não marcar para ticket médio, clientes únicos)
+            </span>
+          </label>
         </div>
         <div className="space-y-1">
           <Label>Aplica-se a</Label>

@@ -20,7 +20,7 @@ type GoalWithRule = {
   actual_value: number | null
   target_value: number
   period_date: string
-  scoring_rules: { name: string; value_type: string; decimal_places: number; target_period: string | null } | null
+  scoring_rules: { name: string; value_type: string; decimal_places: number; target_period: string | null; is_cumulative: boolean } | null
 }
 
 export default async function ParticipantDashboard() {
@@ -73,16 +73,32 @@ export default async function ParticipantDashboard() {
 
     const { data: goalsRaw } = await supabase
       .from('participant_goals')
-      .select('id, scoring_rule_id, actual_value, target_value, period_date, scoring_rules(name, value_type, decimal_places, target_period)')
+      .select('id, scoring_rule_id, actual_value, target_value, period_date, scoring_rules(name, value_type, decimal_places, target_period, is_cumulative)')
       .eq('user_id', user.id)
       .gte('period_date', monthStart)
       .lte('period_date', monthEnd)
     const allGoals = (goalsRaw ?? []) as GoalWithRule[]
-    todayGoals = allGoals.filter(g =>
-      g.scoring_rules?.target_period === 'monthly'
-        ? g.period_date === monthStart
-        : g.period_date === today
-    )
+
+    // Deduplicate by rule: for cumulative daily rules, merge into one entry with accumulated value
+    const byRule = new Map<string, GoalWithRule[]>()
+    for (const g of allGoals) {
+      const arr = byRule.get(g.scoring_rule_id) ?? []
+      arr.push(g)
+      byRule.set(g.scoring_rule_id, arr)
+    }
+    todayGoals = [...byRule.entries()].map(([, entries]) => {
+      const rule = entries[0].scoring_rules
+      if (rule?.is_cumulative) {
+        // Sum all actual values for the month, show against total monthly target
+        const totalActual = entries.reduce((s, g) => s + (g.actual_value ?? 0), 0)
+        const totalTarget = entries.reduce((s, g) => s + g.target_value, 0)
+        return { ...entries[0], actual_value: totalActual, target_value: totalTarget, period_date: monthStart }
+      }
+      if (rule?.target_period === 'monthly') {
+        return entries.find(g => g.period_date === monthStart) ?? entries[0]
+      }
+      return entries.find(g => g.period_date === today) ?? entries[0]
+    }).filter(g => g !== undefined) as GoalWithRule[]
   }
 
   const cardBg = 'rgba(255,255,255,0.03)'
@@ -171,7 +187,7 @@ export default async function ParticipantDashboard() {
                 target={g.target_value}
                 valueType={g.scoring_rules?.value_type ?? 'number'}
                 decimalPlaces={g.scoring_rules?.decimal_places ?? 0}
-                periodLabel={g.scoring_rules?.target_period === 'monthly' ? 'Mensal' : 'Hoje'}
+                periodLabel={g.scoring_rules?.is_cumulative ? 'Acumulado' : g.scoring_rules?.target_period === 'monthly' ? 'Mensal' : 'Hoje'}
               />
             ))}
           </div>
@@ -188,16 +204,23 @@ export default async function ParticipantDashboard() {
             {myPoints.length === 0
               ? <p style={{ padding: '1.5rem', textAlign: 'center', color: muted, fontSize: '0.82rem' }}>Nenhum ponto ainda.</p>
               : myPoints.slice(0, 8).map(pt => (
-                  <div key={pt.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.55rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                    <span style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.8)', flex: 1 }}>
-                      {pt.scoring_rules?.name ?? 'Bônus'}
-                    </span>
-                    <span style={{ fontSize: '0.7rem', color: muted, marginRight: '0.75rem' }}>
+                  <div key={pt.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.6rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.85)', margin: 0, fontWeight: 500 }}>
+                        {pt.scoring_rules?.name ?? 'Bônus'}
+                      </p>
+                      {pt.description && (
+                        <p style={{ fontSize: '0.68rem', color: muted, margin: 0, marginTop: '0.1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {pt.description.replace(/^SF Import — [^(]+/, '').replace(/^\s*—\s*/, '').replace(/\(|\)/g, '').trim() || pt.description}
+                        </p>
+                      )}
+                    </div>
+                    <span style={{ fontSize: '0.7rem', color: muted, whiteSpace: 'nowrap' }}>
                       {format(new Date(pt.event_date), 'dd/MM')}
                     </span>
                     <span style={{
                       fontSize: '0.8rem', fontWeight: 700, padding: '0.1rem 0.5rem',
-                      borderRadius: '0 0.25rem 0.25rem 0.25rem',
+                      borderRadius: '0 0.25rem 0.25rem 0.25rem', whiteSpace: 'nowrap',
                       background: pt.points > 0 ? 'rgba(141,178,60,0.18)' : 'rgba(220,53,69,0.15)',
                       color: pt.points > 0 ? '#8DB23C' : '#f87171',
                     }}>

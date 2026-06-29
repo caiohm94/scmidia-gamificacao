@@ -84,6 +84,7 @@ type ScoringRuleRow = {
   sf_run_day: number | null
   value_type: 'number' | 'currency' | 'percentage'
   decimal_places: number
+  is_cumulative: boolean
 }
 type ScoringRuleExceptionRow = {
   id: string; scoring_rule_id: string; user_id: string; points_override: number; reason: string | null

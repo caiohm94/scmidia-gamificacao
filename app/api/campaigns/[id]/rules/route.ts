@@ -15,6 +15,7 @@ const ruleSchema = z.object({
   is_active: z.boolean().default(true),
   value_type: z.enum(['number', 'currency', 'percentage']).default('number'),
   decimal_places: z.number().int().min(0).max(4).default(0),
+  is_cumulative: z.boolean().default(false),
 }).extend(salesforceRuleFields.shape)
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
