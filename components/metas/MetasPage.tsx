@@ -5,8 +5,8 @@ import { MetasMatrixTab } from './MetasMatrixTab'
 import { RealizadoTab } from './RealizadoTab'
 
 type Campaign = { id: string; name: string }
-type Rule = { id: string; name: string; points: number; target_period: string | null; campaign_id: string; category: string; value_type: string; decimal_places: number; is_active: boolean }
-type Participant = { id: string; name: string }
+type Rule = { id: string; name: string; points: number; target_period: string | null; campaign_id: string; category: string; value_type: string; decimal_places: number; is_active: boolean; applies_to: string }
+type Participant = { id: string; name: string; function: string }
 
 interface Props {
   campaigns: Campaign[]
@@ -67,14 +67,18 @@ export function MetasPage({ campaigns, initialCampaignId, initialRuleId, initial
       fetch(`/api/campaigns/${campaignId}/participants`).then(r => r.ok ? r.json() : []),
     ]).then(([allRules, rawParticipants]) => {
       setRules((allRules as Rule[]).filter(r => r.category === 'goal' && r.is_active !== false))
-      const ps: Participant[] = (rawParticipants as Array<{ user_id: string; users: { id: string; name: string } | null }>)
-        .flatMap(p => p.users ? [{ id: p.users.id, name: p.users.name }] : [])
+      const ps: Participant[] = (rawParticipants as Array<{ user_id: string; users: { id: string; name: string; function: string } | null }>)
+        .flatMap(p => p.users ? [{ id: p.users.id, name: p.users.name, function: p.users.function ?? '' }] : [])
       setParticipants(ps)
       setLoadingCampaign(false)
     })
   }, [campaignId])
 
   const selectedRule = rules.find(r => r.id === ruleId)
+
+  const filteredParticipants = selectedRule && selectedRule.applies_to !== 'all'
+    ? participants.filter(p => p.function === selectedRule.applies_to)
+    : participants
 
   function handleCampaignChange(id: string) {
     setCampaignId(id)
@@ -144,7 +148,7 @@ export function MetasPage({ campaigns, initialCampaignId, initialRuleId, initial
               ruleId={ruleId}
               campaignId={campaignId}
               month={month}
-              participants={participants}
+              participants={filteredParticipants}
               valueType={selectedRule?.value_type ?? 'number'}
               decimalPlaces={selectedRule?.decimal_places ?? 0}
               targetPeriod={selectedRule?.target_period ?? 'daily'}
@@ -154,7 +158,7 @@ export function MetasPage({ campaigns, initialCampaignId, initialRuleId, initial
             <RealizadoTab
               ruleId={ruleId}
               campaignId={campaignId}
-              participants={participants}
+              participants={filteredParticipants}
               valueType={selectedRule?.value_type ?? 'number'}
               decimalPlaces={selectedRule?.decimal_places ?? 0}
             />
