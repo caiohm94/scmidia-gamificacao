@@ -123,30 +123,51 @@ export default async function CampaignDetailPage({ params }: Props) {
             </div>
             <span style={{ fontSize: '0.75rem', color: 'rgba(63,62,62,0.45)' }}>{rules.length} regra(s)</span>
           </div>
-          {rules.length > 0 && (
-            <div className="sc-card" style={{ padding: 0, overflow: 'hidden', marginBottom: '0.75rem' }}>
-              {rules.map((r, i) => (
-                <div key={r.id} className="flex items-center justify-between px-4 py-3"
-                  style={{ borderTop: i > 0 ? '1px solid rgba(63,62,62,0.07)' : 'none' }}>
-                  <div>
-                    <p style={{ fontWeight: 500, fontSize: '0.875rem', color: r.is_active ? '#3F3E3E' : 'rgba(63,62,62,0.35)', textDecoration: r.is_active ? 'none' : 'line-through' }}>{r.name}</p>
-                    {r.description && <p style={{ fontSize: '0.75rem', color: 'rgba(63,62,62,0.5)', marginTop: '0.1rem' }}>{r.description}</p>}
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="text-right">
-                      <p style={{ fontFamily: 'var(--font-outfit, sans-serif)', fontWeight: 700, fontSize: '0.875rem', color: '#3F3E3E' }}>{r.points} pts</p>
-                      {r.target_period && <p style={{ fontSize: '0.7rem', color: 'rgba(63,62,62,0.4)' }}>{r.target_period}</p>}
+          {rules.length > 0 && (() => {
+            const groups: { key: string; label: string }[] = [
+              { key: 'all', label: 'Todos' },
+              { key: 'internal_seller', label: 'Vendedor Interno' },
+              { key: 'external_seller', label: 'Vendedor Externo' },
+              { key: 'hunter', label: 'Hunter' },
+            ]
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                {groups.map(g => {
+                  const groupRules = rules.filter(r => (r.applies_to ?? 'all') === g.key)
+                  if (groupRules.length === 0) return null
+                  return (
+                    <div key={g.key}>
+                      <p style={{ fontSize: '0.7rem', fontWeight: 600, color: 'rgba(63,62,62,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem', paddingLeft: '0.1rem' }}>
+                        {g.label}
+                      </p>
+                      <div className="sc-card" style={{ padding: 0, overflow: 'hidden' }}>
+                        {groupRules.map((r, i) => (
+                          <div key={r.id} className="flex items-center justify-between px-4 py-3"
+                            style={{ borderTop: i > 0 ? '1px solid rgba(63,62,62,0.07)' : 'none' }}>
+                            <div>
+                              <p style={{ fontWeight: 500, fontSize: '0.875rem', color: r.is_active ? '#3F3E3E' : 'rgba(63,62,62,0.35)', textDecoration: r.is_active ? 'none' : 'line-through' }}>{r.name}</p>
+                              {r.description && <p style={{ fontSize: '0.75rem', color: 'rgba(63,62,62,0.5)', marginTop: '0.1rem' }}>{r.description}</p>}
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="text-right">
+                                <p style={{ fontFamily: 'var(--font-outfit, sans-serif)', fontWeight: 700, fontSize: '0.875rem', color: '#3F3E3E' }}>{r.points} pts</p>
+                                {r.target_period && <p style={{ fontSize: '0.7rem', color: 'rgba(63,62,62,0.4)' }}>{r.target_period}</p>}
+                              </div>
+                              {r.data_origin === 'salesforce' && (
+                                <SyncRuleButton ruleId={r.id} ruleName={r.name} />
+                              )}
+                              <EditRuleButton campaignId={id} rule={r} />
+                              <ToggleRuleButton campaignId={id} ruleId={r.id} isActive={r.is_active} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    {r.data_origin === 'salesforce' && (
-                      <SyncRuleButton ruleId={r.id} ruleName={r.name} />
-                    )}
-                    <EditRuleButton campaignId={id} rule={r} />
-                    <ToggleRuleButton campaignId={id} ruleId={r.id} isActive={r.is_active} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+                  )
+                })}
+              </div>
+            )
+          })()}
           <RuleForm campaignId={id} />
         </div>
 
