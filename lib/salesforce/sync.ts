@@ -10,10 +10,14 @@ export type SyncResult = {
 }
 
 function getField(record: Record<string, unknown>, path: string): unknown {
-  // Aggregate SOQL queries flatten relationship fields: 'Owner.Alias' becomes a literal key
+  const parts = path.split('.')
+  // Aggregate SOQL: GROUP BY Owner.Alias → Salesforce returns key as 'Alias' (last segment only)
+  const lastKey = parts[parts.length - 1]
+  if (lastKey in record) return record[lastKey]
+  // Aggregate SOQL: some contexts return the full dotted string as a literal key
   if (path in record) return record[path]
-  // Regular SOQL queries use nested objects: { Owner: { Alias: '...' } }
-  return path.split('.').reduce<unknown>((acc, key) => {
+  // Regular SOQL: nested objects { Owner: { Alias: '...' } }
+  return parts.reduce<unknown>((acc, key) => {
     if (acc !== null && typeof acc === 'object') return (acc as Record<string, unknown>)[key]
     return undefined
   }, record)
