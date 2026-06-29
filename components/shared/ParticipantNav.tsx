@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation'
 
 const items = [
   { href: '/participant/dashboard', label: 'Painel' },
+  { href: '/participant/metas', label: 'Metas' },
   { href: '/participant/ranking', label: 'Ranking' },
   { href: '/participant/history', label: 'Histórico' },
   { href: '/participant/feed', label: 'Feed' },

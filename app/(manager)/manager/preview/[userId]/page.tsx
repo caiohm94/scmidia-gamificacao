@@ -6,6 +6,9 @@ import { LevelBadge } from '@/components/game/LevelBadge'
 import { StreakBadge } from '@/components/game/StreakBadge'
 import { RankingTable } from '@/components/game/RankingTable'
 import { FeedItem } from '@/components/game/FeedItem'
+import { AnimatedCounter } from '@/components/participant/AnimatedCounter'
+import { GoalProgressBar } from '@/components/participant/GoalProgressBar'
+import { getDaysInMonth, formatValueCompact } from '@/lib/goals/helpers'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import Image from 'next/image'
@@ -16,9 +19,11 @@ type PointWithRule = { id: string; points: number; event_date: string; created_a
 type FeedEvent = { id: string; event_type: string; payload: Record<string, unknown>; created_at: string; user_id: string }
 type LevelEntry = { id: string; name: string; badge_icon: string; color: string; min_points: number }
 type BonusEntry = { id: string; bonuses: { name: string; badge_icon: string } | null }
+type GoalWithRule = { id: string; scoring_rule_id: string; actual_value: number | null; target_value: number; period_date: string; scoring_rules: { name: string; value_type: string; decimal_places: number; target_period: string | null } | null }
 
 const NAV_TABS = [
   { key: 'painel', label: 'Painel' },
+  { key: 'metas', label: 'Metas' },
   { key: 'ranking', label: 'Ranking' },
   { key: 'historico', label: 'Histórico' },
   { key: 'feed', label: 'Feed' },
@@ -58,6 +63,10 @@ export default async function PreviewPage({
   let currentLevel: LevelEntry | undefined
   let earnedBonuses: BonusEntry[] = []
   let rankingRows: Awaited<ReturnType<typeof getRanking>> = []
+  let todayPreviewGoals: GoalWithRule[] = []
+  let allPreviewGoals: GoalWithRule[] = []
+  let previewYear = 0
+  let previewMonth = 0
 
   if (campaign) {
     rankingRows = await getRanking(admin, { campaign_id: campaign.id })
@@ -76,6 +85,26 @@ export default async function PreviewPage({
       .from('user_bonuses').select('id, bonuses(name, badge_icon)')
       .eq('user_id', userId).eq('campaign_id', campaign.id)
     earnedBonuses = (bonuses ?? []) as BonusEntry[]
+
+    const todayStr = new Date().toISOString().slice(0, 10)
+    const [gy, gm] = todayStr.slice(0, 7).split('-').map(Number)
+    previewYear = gy
+    previewMonth = gm
+    const monthStart = `${gy}-${String(gm).padStart(2, '0')}-01`
+    const lastDay = new Date(gy, gm, 0).getDate()
+    const monthEnd = `${gy}-${String(gm).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+    const { data: goalsRaw } = await admin
+      .from('participant_goals')
+      .select('id, scoring_rule_id, actual_value, target_value, period_date, scoring_rules(name, value_type, decimal_places, target_period)')
+      .eq('user_id', userId)
+      .gte('period_date', monthStart)
+      .lte('period_date', monthEnd)
+    allPreviewGoals = (goalsRaw ?? []) as GoalWithRule[]
+    todayPreviewGoals = allPreviewGoals.filter(g =>
+      g.scoring_rules?.target_period === 'monthly'
+        ? g.period_date === monthStart
+        : g.period_date === todayStr
+    )
   }
 
   // --- FEED data ---
@@ -137,72 +166,83 @@ export default async function PreviewPage({
 
         {/* ---- PAINEL ---- */}
         {tab === 'painel' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            {/* Greeting */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
-              <div>
-                <h1 style={{ fontSize: '1.8rem', fontWeight: 800, fontFamily: 'var(--font-outfit)', margin: 0 }}>
-                  Olá, {user.name.split(' ')[0]}! 👋
-                </h1>
-                {campaign && <p style={{ fontSize: '0.85rem', color: muted, marginTop: '0.2rem' }}>{campaign.name}</p>}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            {/* Hero */}
+            <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '0 1.25rem 1.25rem 1.25rem', padding: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                <Avatar src={user.avatar_url} name={user.name} size={72} />
+                <div>
+                  <h1 style={{ fontSize: '1.7rem', fontWeight: 800, fontFamily: 'var(--font-outfit)', margin: 0, lineHeight: 1.1 }}>
+                    Olá, {user.name.split(' ')[0]}! 👋
+                  </h1>
+                  {campaign && <p style={{ fontSize: '0.8rem', color: muted, marginTop: '0.25rem' }}>{campaign.name}</p>}
+                </div>
               </div>
-              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                 {currentLevel && <LevelBadge name={currentLevel.name} icon={currentLevel.badge_icon} color={currentLevel.color} />}
-                <StreakBadge streak={myStreak} />
+                {myStreak > 0 && <StreakBadge streak={myStreak} />}
               </div>
             </div>
 
             {/* Stats */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.75rem' }}>
-              {[
-                { value: totalPoints.toLocaleString('pt-BR'), label: 'pontos totais ⚽', color: '#FFDF00', border: 'rgba(255,223,0,0.2)' },
-                { value: myPosition ? `#${myPosition}` : '—', label: 'posição no ranking 🏆', color: '#fff', border: cardBorder },
-                { value: String(myStreak), label: 'dias seguidos 🔥', color: '#f97316', border: 'rgba(249,115,22,0.2)' },
-              ].map(s => (
-                <div key={s.label} style={{ background: cardBg, border: `1px solid ${s.border}`, borderRadius: '0 0.75rem 0.75rem 0.75rem', padding: '1.25rem 1rem', textAlign: 'center' }}>
-                  <div style={{ fontSize: '2.2rem', fontWeight: 800, color: s.color, fontFamily: 'var(--font-outfit)', lineHeight: 1.1 }}>{s.value}</div>
-                  <p style={{ fontSize: '0.72rem', color: muted, marginTop: '0.3rem' }}>{s.label}</p>
-                </div>
-              ))}
+              <div style={{ background: 'rgba(255,223,0,0.06)', border: '1px solid rgba(255,223,0,0.2)', borderRadius: '0 1rem 1rem 1rem', padding: '1.25rem 1rem', textAlign: 'center' }}>
+                <AnimatedCounter value={totalPoints} style={{ fontSize: '2.4rem', fontWeight: 800, color: '#FFDF00', fontFamily: 'var(--font-outfit)', lineHeight: 1.1, display: 'block' }} />
+                <p style={{ fontSize: '0.72rem', color: muted, marginTop: '0.3rem' }}>pontos totais ⚽</p>
+              </div>
+              <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '0 1rem 1rem 1rem', padding: '1.25rem 1rem', textAlign: 'center' }}>
+                <div style={{ fontSize: '2.4rem', fontWeight: 800, fontFamily: 'var(--font-outfit)', lineHeight: 1.1 }}>{myPosition ? `#${myPosition}` : '—'}</div>
+                <p style={{ fontSize: '0.72rem', color: muted, marginTop: '0.3rem' }}>posição no ranking 🏆</p>
+              </div>
+              <div style={{ background: 'rgba(249,115,22,0.06)', border: '1px solid rgba(249,115,22,0.2)', borderRadius: '0 1rem 1rem 1rem', padding: '1.25rem 1rem', textAlign: 'center' }}>
+                <div style={{ fontSize: '2.4rem', fontWeight: 800, color: '#f97316', fontFamily: 'var(--font-outfit)', lineHeight: 1.1 }}>{myStreak}</div>
+                <p style={{ fontSize: '0.72rem', color: muted, marginTop: '0.3rem' }}>dias seguidos 🔥</p>
+              </div>
             </div>
 
+            {/* Goals */}
+            {todayPreviewGoals.length > 0 && (
+              <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '0 1rem 1rem 1rem', overflow: 'hidden' }}>
+                <div style={{ padding: '0.75rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <p style={{ fontWeight: 600, fontSize: '0.82rem', fontFamily: 'var(--font-outfit)', margin: 0 }}>Minhas metas</p>
+                  <Link href={navHref('metas')} style={{ fontSize: '0.72rem', color: '#8DB23C', textDecoration: 'none' }}>Ver tudo →</Link>
+                </div>
+                <div style={{ padding: '1rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {todayPreviewGoals.map(g => (
+                    <GoalProgressBar key={g.id} label={g.scoring_rules?.name ?? 'Meta'} actual={g.actual_value} target={g.target_value} valueType={g.scoring_rules?.value_type ?? 'number'} decimalPlaces={g.scoring_rules?.decimal_places ?? 0} periodLabel={g.scoring_rules?.target_period === 'monthly' ? 'Mensal' : 'Hoje'} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Points + bonuses */}
             <div style={{ display: 'grid', gridTemplateColumns: earnedBonuses.length > 0 ? '1fr 1fr' : '1fr', gap: '0.75rem' }}>
-              {/* Recent points */}
-              <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '0 0.75rem 0.75rem 0.75rem', overflow: 'hidden' }}>
-                <div style={{ padding: '0.75rem 1rem', borderBottom: `1px solid ${border}` }}>
-                  <p style={{ fontWeight: 600, fontSize: '0.8rem', fontFamily: 'var(--font-outfit)' }}>Últimos pontos</p>
+              <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '0 1rem 1rem 1rem', overflow: 'hidden' }}>
+                <div style={{ padding: '0.75rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                  <p style={{ fontWeight: 600, fontSize: '0.82rem', fontFamily: 'var(--font-outfit)', margin: 0 }}>Últimos pontos</p>
                 </div>
                 <div>
                   {myPoints.length === 0
                     ? <p style={{ padding: '1.5rem', textAlign: 'center', color: muted, fontSize: '0.82rem' }}>Nenhum ponto ainda.</p>
                     : myPoints.slice(0, 8).map(pt => (
-                        <div key={pt.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.55rem 1rem', borderBottom: `1px solid ${border}` }}>
-                          <span style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.85)', flex: 1 }}>{pt.scoring_rules?.name ?? 'Bônus'}</span>
-                          <span style={{ fontSize: '0.72rem', color: muted, marginRight: '0.75rem' }}>
-                            {format(new Date(pt.event_date), 'dd/MM', { locale: ptBR })}
-                          </span>
-                          <span style={{
-                            fontSize: '0.8rem', fontWeight: 700, padding: '0.1rem 0.5rem',
-                            borderRadius: '0 0.25rem 0.25rem 0.25rem',
-                            background: pt.points > 0 ? 'rgba(141,178,60,0.2)' : 'rgba(220,53,69,0.15)',
-                            color: pt.points > 0 ? '#8DB23C' : '#f87171',
-                          }}>
+                        <div key={pt.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.55rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                          <span style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.8)', flex: 1 }}>{pt.scoring_rules?.name ?? 'Bônus'}</span>
+                          <span style={{ fontSize: '0.7rem', color: muted, marginRight: '0.75rem' }}>{format(new Date(pt.event_date), 'dd/MM', { locale: ptBR })}</span>
+                          <span style={{ fontSize: '0.8rem', fontWeight: 700, padding: '0.1rem 0.5rem', borderRadius: '0 0.25rem 0.25rem 0.25rem', background: pt.points > 0 ? 'rgba(141,178,60,0.18)' : 'rgba(220,53,69,0.15)', color: pt.points > 0 ? '#8DB23C' : '#f87171' }}>
                             {pt.points > 0 ? '+' : ''}{pt.points}
                           </span>
                         </div>
                       ))}
                 </div>
               </div>
-
-              {/* Bonuses */}
               {earnedBonuses.length > 0 && (
-                <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '0 0.75rem 0.75rem 0.75rem', overflow: 'hidden' }}>
-                  <div style={{ padding: '0.75rem 1rem', borderBottom: `1px solid ${border}` }}>
-                    <p style={{ fontWeight: 600, fontSize: '0.8rem', fontFamily: 'var(--font-outfit)' }}>Conquistas</p>
+                <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '0 1rem 1rem 1rem', overflow: 'hidden' }}>
+                  <div style={{ padding: '0.75rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                    <p style={{ fontWeight: 600, fontSize: '0.82rem', fontFamily: 'var(--font-outfit)', margin: 0 }}>Conquistas</p>
                   </div>
                   <div style={{ padding: '1rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                     {earnedBonuses.map(ub => (
-                      <div key={ub.id} style={{ textAlign: 'center', padding: '0.6rem 0.75rem', borderRadius: '0 0.5rem 0.5rem 0.5rem', background: 'rgba(255,255,255,0.06)', border: `1px solid ${cardBorder}` }}>
+                      <div key={ub.id} style={{ textAlign: 'center', padding: '0.6rem 0.75rem', borderRadius: '0 0.5rem 0.5rem 0.5rem', background: 'rgba(255,255,255,0.05)', border: `1px solid ${cardBorder}` }}>
                         <div style={{ fontSize: '1.5rem' }}>{ub.bonuses?.badge_icon}</div>
                         <div style={{ fontSize: '0.65rem', color: muted, marginTop: '0.2rem' }}>{ub.bonuses?.name}</div>
                       </div>
@@ -213,6 +253,95 @@ export default async function PreviewPage({
             </div>
           </div>
         )}
+
+        {/* ---- METAS ---- */}
+        {tab === 'metas' && (() => {
+          const byRule = new Map<string, GoalWithRule[]>()
+          for (const g of allPreviewGoals) {
+            const arr = byRule.get(g.scoring_rule_id) ?? []
+            arr.push(g)
+            byRule.set(g.scoring_rule_id, arr)
+          }
+          const todayStr2 = new Date().toISOString().slice(0, 10)
+          const days2 = getDaysInMonth(previewYear, previewMonth)
+          const monthLabel = previewYear > 0
+            ? new Date(previewYear, previewMonth - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+            : ''
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <h1 style={{ fontSize: '1.5rem', fontWeight: 800, fontFamily: 'var(--font-outfit)', margin: 0 }}>🎯 Minhas Metas</h1>
+                <span style={{ fontSize: '0.82rem', color: muted, textTransform: 'capitalize' }}>{monthLabel}</span>
+              </div>
+              {byRule.size === 0 && (
+                <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '0 1rem 1rem 1rem', padding: '3rem', textAlign: 'center' }}>
+                  <p style={{ color: muted, fontSize: '0.85rem' }}>Nenhuma meta definida para este mês.</p>
+                </div>
+              )}
+              {[...byRule.entries()].map(([ruleId, ruleGoals]) => {
+                const rule = ruleGoals[0].scoring_rules
+                const isMonthly = rule?.target_period === 'monthly'
+                const monthlyGoal = isMonthly ? ruleGoals[0] : null
+                const totalActual = ruleGoals.reduce((s, g) => s + (g.actual_value ?? 0), 0)
+                const totalTarget = ruleGoals.reduce((s, g) => s + g.target_value, 0)
+                return (
+                  <div key={ruleId} style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '0 1rem 1rem 1rem', overflow: 'hidden' }}>
+                    <div style={{ padding: '0.85rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <p style={{ fontWeight: 700, fontSize: '0.9rem', fontFamily: 'var(--font-outfit)', margin: 0 }}>{rule?.name ?? 'Meta'}</p>
+                      <span style={{ fontSize: '0.65rem', color: muted, background: 'rgba(255,255,255,0.06)', padding: '0.1rem 0.4rem', borderRadius: '0.2rem' }}>
+                        {isMonthly ? 'Mensal' : 'Diário'}
+                      </span>
+                    </div>
+                    <div style={{ padding: '1rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      <GoalProgressBar
+                        label={isMonthly ? 'Meta do mês' : 'Progresso do mês'}
+                        actual={isMonthly ? (monthlyGoal?.actual_value ?? null) : totalActual}
+                        target={isMonthly ? (monthlyGoal?.target_value ?? 0) : totalTarget}
+                        valueType={rule?.value_type ?? 'number'}
+                        decimalPlaces={rule?.decimal_places ?? 0}
+                      />
+                      {!isMonthly && (
+                        <div>
+                          <p style={{ fontSize: '0.7rem', color: muted, marginBottom: '0.5rem', fontWeight: 500 }}>Dias do mês</p>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+                            {days2.map(d => {
+                              const dateStr = `${previewYear}-${String(previewMonth).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+                              const g = ruleGoals.find(r => r.period_date === dateStr)
+                              const isFuture = dateStr > todayStr2
+                              const isToday = dateStr === todayStr2
+                              const achieved = g != null && g.actual_value != null && g.actual_value >= g.target_value
+                              const hasData = g != null && g.actual_value != null
+                              let bg2 = 'rgba(255,255,255,0.06)', color2 = muted, border2 = cardBorder
+                              if (!g || isFuture) { bg2 = 'rgba(255,255,255,0.03)'; color2 = 'rgba(255,255,255,0.2)' }
+                              else if (achieved) { bg2 = 'rgba(141,178,60,0.2)'; color2 = '#8DB23C'; border2 = 'rgba(141,178,60,0.3)' }
+                              else if (hasData) { bg2 = 'rgba(249,115,22,0.15)'; color2 = '#f97316'; border2 = 'rgba(249,115,22,0.25)' }
+                              const vt = rule?.value_type ?? 'number'
+                              const dp = rule?.decimal_places ?? 0
+                              return (
+                                <div key={d} title={g ? `${formatValueCompact(g.actual_value ?? 0, vt, dp)} / ${formatValueCompact(g.target_value, vt, dp)}` : undefined}
+                                  style={{ width: 32, height: 32, borderRadius: isToday ? '50%' : '0 0.35rem 0.35rem 0.35rem', background: bg2, border: `1px solid ${isToday ? '#FFDF00' : border2}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: isToday ? 700 : 500, color: isToday ? '#FFDF00' : color2 }}>
+                                  {d}
+                                </div>
+                              )
+                            })}
+                          </div>
+                          <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+                            {[{ color: '#8DB23C', label: 'Bateu a meta' }, { color: '#f97316', label: 'Abaixo da meta' }, { color: 'rgba(255,255,255,0.2)', label: 'Sem meta / futuro' }].map(l => (
+                              <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                <div style={{ width: 8, height: 8, borderRadius: '50%', background: l.color }} />
+                                <span style={{ fontSize: '0.65rem', color: muted }}>{l.label}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )
+        })()}
 
         {/* ---- RANKING ---- */}
         {tab === 'ranking' && (
