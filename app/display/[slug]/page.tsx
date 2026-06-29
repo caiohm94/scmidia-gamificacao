@@ -77,7 +77,7 @@ function TVAvatar({ src, name, size = 56, glowing = false }: { src?: string | nu
   const initial = name?.charAt(0)?.toUpperCase() ?? '?'
   const border = glowing ? '3px solid #FFDF00' : '2px solid rgba(141,178,60,0.35)'
   const shadow = glowing ? '0 0 20px 4px rgba(255,223,0,0.3)' : 'none'
-  const style = { width: size, height: size, borderRadius: '50%', flexShrink: 0, border, boxShadow: shadow, objectFit: 'cover' as const, transition: 'box-shadow 0.4s' }
+  const style = { width: size, height: size, borderRadius: '0 0.75rem 0.75rem 0.75rem', flexShrink: 0, border, boxShadow: shadow, objectFit: 'cover' as const, transition: 'box-shadow 0.4s' }
 
   if (src && !err) return <img src={src} alt={name} onError={() => setErr(true)} style={style} />
   return (
