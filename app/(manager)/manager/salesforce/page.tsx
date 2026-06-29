@@ -18,35 +18,16 @@ type RecordRow = {
   scoring_rules: { name: string } | null
 }
 
-type Props = { searchParams: Promise<{ campaign_id?: string; rule_id?: string }> }
-
-export default async function SalesforceImportsPage({ searchParams }: Props) {
+export default async function SalesforceImportsPage() {
   await requireRole('manager')
-  const { campaign_id, rule_id } = await searchParams
   const supabase = await createClient()
 
-  const { data: campaigns } = await supabase
-    .from('campaigns')
-    .select('id, name')
-    .order('created_at', { ascending: false })
-
-  let rulesQuery = supabase
-    .from('scoring_rules')
-    .select('id, name, campaign_id')
-    .eq('data_origin', 'salesforce')
-    .order('created_at', { ascending: false })
-  if (campaign_id) rulesQuery = rulesQuery.eq('campaign_id', campaign_id)
-  const { data: rules } = await rulesQuery
-
-  let recordsQuery = supabase
+  const { data: recordsRaw } = await supabase
     .from('salesforce_records')
     .select('id, sf_id, sf_created_at, imported_at, owner_name, sf_alias, account_name, description, user_id, transaction_id, scoring_rules(name)')
     .order('imported_at', { ascending: false })
-    .limit(200)
-  if (rule_id) recordsQuery = recordsQuery.eq('scoring_rule_id', rule_id)
-  else if (campaign_id) recordsQuery = recordsQuery.eq('campaign_id', campaign_id)
+    .limit(500)
 
-  const { data: recordsRaw } = await recordsQuery
   const records = (recordsRaw ?? []) as unknown as RecordRow[]
 
   const thStyle: React.CSSProperties = {
@@ -77,41 +58,6 @@ export default async function SalesforceImportsPage({ searchParams }: Props) {
       </div>
 
       <div className="p-6 space-y-4 max-w-7xl">
-        {/* Filtros */}
-        <form method="GET" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
-          <select
-            name="campaign_id"
-            defaultValue={campaign_id ?? ''}
-            style={{ border: '1px solid rgba(63,62,62,0.15)', borderRadius: '0 0.4rem 0.4rem 0.4rem', padding: '0.4rem 0.7rem', fontSize: '0.8rem', color: '#3F3E3E', background: '#fff', cursor: 'pointer' }}
-          >
-            <option value="">Todas as campanhas</option>
-            {(campaigns ?? []).map(c => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
-          <select
-            name="rule_id"
-            defaultValue={rule_id ?? ''}
-            style={{ border: '1px solid rgba(63,62,62,0.15)', borderRadius: '0 0.4rem 0.4rem 0.4rem', padding: '0.4rem 0.7rem', fontSize: '0.8rem', color: '#3F3E3E', background: '#fff', cursor: 'pointer' }}
-          >
-            <option value="">Todas as regras</option>
-            {(rules ?? []).map(r => (
-              <option key={r.id} value={r.id}>{r.name}</option>
-            ))}
-          </select>
-          <button
-            type="submit"
-            style={{ padding: '0.4rem 1rem', fontSize: '0.8rem', background: '#8DB23C', color: '#fff', border: 'none', borderRadius: '0 0.4rem 0.4rem 0.4rem', cursor: 'pointer' }}
-          >
-            Filtrar
-          </button>
-          {(campaign_id || rule_id) && (
-            <a href="/manager/salesforce" style={{ padding: '0.4rem 0.9rem', fontSize: '0.8rem', color: 'rgba(63,62,62,0.5)', border: '1px solid rgba(63,62,62,0.15)', borderRadius: '0 0.4rem 0.4rem 0.4rem', textDecoration: 'none' }}>
-              Limpar
-            </a>
-          )}
-        </form>
-
         {records.length === 0 ? (
           <div className="sc-card" style={{ textAlign: 'center', padding: '3rem' }}>
             <CloudDownload size={32} color="rgba(63,62,62,0.2)" style={{ margin: '0 auto 0.75rem' }} />
