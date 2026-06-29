@@ -146,5 +146,21 @@ export async function importRule(ruleId: string, triggeredBy: string): Promise<I
     else result.skipped++
   }
 
+  const status = result.errors.length > 0 && result.inserted === 0 ? 'error'
+    : result.errors.length > 0 ? 'partial'
+    : result.inserted > 0 ? 'success'
+    : 'no_match'
+
+  await admin.from('salesforce_sync_logs').insert({
+    rule_id: ruleId,
+    rule_name: result.rule_name,
+    triggered_by: triggeredBy,
+    sf_found: sfRows.length,
+    inserted: result.inserted,
+    skipped: result.skipped,
+    errors: result.errors,
+    status,
+  })
+
   return result
 }

@@ -9,6 +9,7 @@ export interface Database {
       users: { Row: UserRow; Insert: Partial<UserRow>; Update: Partial<UserRow>; Relationships: [] }
       salesforce_sync_state: { Row: SalesforceSyncStateRow; Insert: Partial<SalesforceSyncStateRow>; Update: Partial<SalesforceSyncStateRow>; Relationships: [] }
       salesforce_records: { Row: SalesforceRecordRow; Insert: Partial<SalesforceRecordRow>; Update: Partial<SalesforceRecordRow>; Relationships: [] }
+      salesforce_sync_logs: { Row: SalesforceSyncLogRow; Insert: Partial<SalesforceSyncLogRow>; Update: Partial<SalesforceSyncLogRow>; Relationships: [] }
       participant_goals: { Row: ParticipantGoalRow; Insert: Partial<ParticipantGoalRow>; Update: Partial<ParticipantGoalRow>; Relationships: [] }
       platform_themes: { Row: PlatformThemeRow; Insert: Partial<PlatformThemeRow>; Update: Partial<PlatformThemeRow>; Relationships: [] }
       campaigns: { Row: CampaignRow; Insert: Partial<CampaignRow>; Update: Partial<CampaignRow>; Relationships: [] }
@@ -142,6 +143,18 @@ export type SalesforceRecordRow = {
   description: string | null
   user_id: string | null
   transaction_id: string | null
+}
+export type SalesforceSyncLogRow = {
+  id: string
+  rule_id: string | null
+  rule_name: string
+  triggered_by: string | null
+  triggered_at: string
+  sf_found: number
+  inserted: number
+  skipped: number
+  errors: string[]
+  status: string
 }
 export type ParticipantGoalRow = {
   id: string
