@@ -98,7 +98,7 @@ export async function importRule(ruleId: string, triggeredBy: string): Promise<I
     let transactionId: string | null = null
 
     if (participant) {
-      const { data: tx, error: txErr } = await admin
+      const { data: txRows, error: txErr } = await admin
         .from('point_transactions')
         .insert({
           campaign_id: rule.campaign_id,
@@ -111,13 +111,12 @@ export async function importRule(ruleId: string, triggeredBy: string): Promise<I
           created_by: triggeredBy,
         })
         .select('id')
-        .single()
 
       if (txErr) {
         result.errors.push(`Erro transação para ${alias}: ${txErr.message}`)
         continue
       }
-      transactionId = tx?.id ?? null
+      transactionId = txRows?.[0]?.id ?? null
     }
 
     const { error: recErr } = await admin
