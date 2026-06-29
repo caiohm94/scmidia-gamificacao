@@ -13,7 +13,7 @@ const ruleSchema = z.object({
   target_value: z.number().int().optional(),
   target_period: z.enum(['daily', 'weekly', 'monthly']).optional(),
   is_active: z.boolean().default(true),
-  value_type: z.enum(['number', 'currency']).default('number'),
+  value_type: z.enum(['number', 'currency', 'percentage']).default('number'),
   decimal_places: z.number().int().min(0).max(4).default(0),
 }).extend(salesforceRuleFields.shape)
 

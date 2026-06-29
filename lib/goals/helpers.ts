@@ -18,6 +18,9 @@ export function parseMonthParam(month: string): { year: number; month: number } 
 
 // Compact display for matrix cells (e.g. 120000 → "120k" or "R$ 120k")
 export function formatValueCompact(value: number, valueType: string, decimalPlaces: number): string {
+  if (valueType === 'percentage') {
+    return value.toLocaleString('pt-BR', { minimumFractionDigits: decimalPlaces, maximumFractionDigits: decimalPlaces }) + '%'
+  }
   const prefix = valueType === 'currency' ? 'R$ ' : ''
   if (Math.abs(value) >= 1_000_000) {
     const m = value / 1_000_000
@@ -35,6 +38,9 @@ export function formatValueCompact(value: number, valueType: string, decimalPlac
 
 // Full display for realizado tab (e.g. 120000 → "R$ 120.000,00")
 export function formatValueFull(value: number, valueType: string, decimalPlaces: number): string {
+  if (valueType === 'percentage') {
+    return value.toLocaleString('pt-BR', { minimumFractionDigits: decimalPlaces, maximumFractionDigits: decimalPlaces }) + '%'
+  }
   const s = value.toLocaleString('pt-BR', { minimumFractionDigits: decimalPlaces, maximumFractionDigits: decimalPlaces })
   return valueType === 'currency' ? `R$ ${s}` : s
 }

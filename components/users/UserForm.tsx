@@ -101,31 +101,16 @@ export function UserForm({ defaultValues, userId, teams = [] }: Props) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label style={labelStyle}>Status *</label>
-          <select
-            value={statusVal}
-            onChange={e => { setStatusVal(e.target.value as UserInput['status']); setValue('status', e.target.value as UserInput['status']) }}
-            style={selectStyle}
-          >
-            <option value="active">Ativo</option>
-            <option value="inactive">Inativo</option>
-          </select>
-        </div>
-        {teams.length > 0 && (
-          <div>
-            <label style={labelStyle}>Time</label>
-            <select
-              value={teamVal ?? ''}
-              onChange={e => { setTeamVal(e.target.value); setValue('team_id', e.target.value || null) }}
-              style={selectStyle}
-            >
-              <option value="">Sem time</option>
-              {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </select>
-          </div>
-        )}
+      <div>
+        <label style={labelStyle}>Status *</label>
+        <select
+          value={statusVal}
+          onChange={e => { setStatusVal(e.target.value as UserInput['status']); setValue('status', e.target.value as UserInput['status']) }}
+          style={selectStyle}
+        >
+          <option value="active">Ativo</option>
+          <option value="inactive">Inativo</option>
+        </select>
       </div>
 
       <div style={{ marginTop: '0.5rem', paddingTop: '1rem', borderTop: '1px solid rgba(63,62,62,0.1)' }}>

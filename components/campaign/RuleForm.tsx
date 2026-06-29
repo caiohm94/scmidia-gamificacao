@@ -113,23 +113,26 @@ export function RuleForm({ campaignId }: Props) {
         <div className="space-y-1">
           <Label>Tipo de valor</Label>
           <Select value={form.value_type} onValueChange={v => setForm(f => ({ ...f, value_type: v ?? 'number' }))}>
-            <SelectTrigger><span>{form.value_type === 'currency' ? 'Monetário (R$)' : 'Número'}</span></SelectTrigger>
+            <SelectTrigger>
+              <span>{{ number: 'Número', currency: 'Monetário (R$)', percentage: 'Percentual (%)' }[form.value_type] ?? 'Número'}</span>
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="number">Número</SelectItem>
               <SelectItem value="currency">Monetário (R$)</SelectItem>
+              <SelectItem value="percentage">Percentual (%)</SelectItem>
             </SelectContent>
           </Select>
         </div>
         <div className="space-y-1">
           <Label>Casas decimais</Label>
-          <Select value={form.decimal_places} onValueChange={v => setForm(f => ({ ...f, decimal_places: v ?? '0' }))}>
-            <SelectTrigger><span>{{ '0': '0 — inteiro', '1': '1 — ex: 1,5', '2': '2 — ex: 1,50' }[form.decimal_places] ?? '0 — inteiro'}</span></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="0">0 — inteiro</SelectItem>
-              <SelectItem value="1">1 — ex: 1,5</SelectItem>
-              <SelectItem value="2">2 — ex: 1,50</SelectItem>
-            </SelectContent>
-          </Select>
+          <Input
+            type="number"
+            min="0"
+            max="4"
+            value={form.decimal_places}
+            onChange={e => setForm(f => ({ ...f, decimal_places: e.target.value }))}
+            placeholder="0"
+          />
         </div>
         <div className="space-y-1">
           <Label>Aplica-se a</Label>

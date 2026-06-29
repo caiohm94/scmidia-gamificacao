@@ -46,7 +46,7 @@ export async function importRule(ruleId: string, triggeredBy: string): Promise<I
 
   const { data: rule, error: ruleErr } = await admin
     .from('scoring_rules')
-    .select('id, name, points, campaign_id, sf_soql, sf_alias_field')
+    .select('id, name, points, campaign_id, sf_soql, sf_alias_field, applies_to')
     .eq('id', ruleId)
     .eq('data_origin', 'salesforce')
     .eq('is_active', true)
@@ -78,10 +78,14 @@ export async function importRule(ruleId: string, triggeredBy: string): Promise<I
 
   const userIds = (participants ?? []).map(p => p.user_id)
 
-  const { data: usersData } = await admin
+  let usersQuery = admin
     .from('users')
     .select('id, sf_alias')
     .in('id', userIds.length > 0 ? userIds : ['00000000-0000-0000-0000-000000000000'])
+  if (rule.applies_to !== 'all') {
+    usersQuery = usersQuery.eq('function', rule.applies_to)
+  }
+  const { data: usersData } = await usersQuery
 
   type ParticipantRow = { user_id: string; sf_alias: string | null }
   const participantList: ParticipantRow[] = (participants ?? []).map(p => ({

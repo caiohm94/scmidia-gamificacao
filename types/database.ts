@@ -82,7 +82,7 @@ type ScoringRuleRow = {
   sf_frequency: '5min' | 'daily' | 'weekly' | null
   sf_run_time: string | null
   sf_run_day: number | null
-  value_type: 'number' | 'currency'
+  value_type: 'number' | 'currency' | 'percentage'
   decimal_places: number
 }
 type ScoringRuleExceptionRow = {
