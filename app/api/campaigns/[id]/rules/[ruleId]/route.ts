@@ -13,6 +13,8 @@ const updateRuleSchema = z.object({
   target_value: z.number().int().optional(),
   target_period: z.enum(['daily', 'weekly', 'monthly']).optional(),
   is_active: z.boolean().optional(),
+  value_type: z.enum(['number', 'currency']).optional(),
+  decimal_places: z.number().int().min(0).max(4).optional(),
 }).extend(salesforceRuleFields.partial().shape)
 
 export async function PATCH(

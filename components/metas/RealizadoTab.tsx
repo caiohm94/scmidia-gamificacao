@@ -1,15 +1,17 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
+import { formatValueFull } from '@/lib/goals/helpers'
 import type { ParticipantGoalRow } from '@/types/database'
 
 type Participant = { id: string; name: string }
-type Rule = { id: string; name: string; points: number; target_period: string | null }
 
 interface Props {
   ruleId: string
   campaignId: string
   participants: Participant[]
+  valueType: string
+  decimalPlaces: number
 }
 
 function todayDate() {
@@ -17,7 +19,7 @@ function todayDate() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-export function RealizadoTab({ ruleId, campaignId, participants }: Props) {
+export function RealizadoTab({ ruleId, campaignId, participants, valueType, decimalPlaces }: Props) {
   const [selectedDate, setSelectedDate] = useState(todayDate())
   const [goals, setGoals] = useState<ParticipantGoalRow[]>([])
   const [actualInputs, setActualInputs] = useState<Record<string, string>>({})
@@ -139,7 +141,9 @@ export function RealizadoTab({ ruleId, campaignId, participants }: Props) {
                 <tr key={p.id} style={{ borderTop: i === 0 ? 'none' : '1px solid rgba(63,62,62,0.06)' }}>
                   <td style={{ padding: '0.6rem 0.75rem', fontWeight: 500, color: '#3F3E3E' }}>{p.name}</td>
                   <td style={{ padding: '0.6rem 0.75rem', color: 'rgba(63,62,62,0.6)', fontSize: '0.82rem' }}>
-                    {goal?.target_value != null ? `R$${goal.target_value.toLocaleString('pt-BR')}` : <span style={{ color: 'rgba(63,62,62,0.3)' }}>Sem meta</span>}
+                    {goal?.target_value != null
+                      ? formatValueFull(goal.target_value, valueType, decimalPlaces)
+                      : <span style={{ color: 'rgba(63,62,62,0.3)' }}>Sem meta</span>}
                   </td>
                   <td style={{ padding: '0.6rem 0.75rem' }}>
                     <input

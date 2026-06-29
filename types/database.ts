@@ -81,6 +81,8 @@ type ScoringRuleRow = {
   sf_frequency: '5min' | 'daily' | 'weekly' | null
   sf_run_time: string | null
   sf_run_day: number | null
+  value_type: 'number' | 'currency'
+  decimal_places: number
 }
 type ScoringRuleExceptionRow = {
   id: string; scoring_rule_id: string; user_id: string; points_override: number; reason: string | null

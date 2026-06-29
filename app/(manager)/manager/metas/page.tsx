@@ -17,27 +17,6 @@ export default async function MetasServerPage({
     .select('id, name')
     .order('name')
 
-  const { data: rules } = params.campaign_id
-    ? await supabase
-        .from('scoring_rules')
-        .select('id, name, points, target_period, campaign_id')
-        .eq('campaign_id', params.campaign_id)
-        .eq('category', 'goal')
-        .eq('is_active', true)
-        .order('name')
-    : { data: [] }
-
-  const { data: participants } = params.campaign_id
-    ? await supabase
-        .from('campaign_participants')
-        .select('user_id, users!user_id(id, name)')
-        .eq('campaign_id', params.campaign_id)
-    : { data: [] }
-
-  const participantUsers = (participants ?? []).flatMap((p: any) =>
-    p.users ? [p.users as { id: string; name: string }] : []
-  )
-
   return (
     <div>
       <div className="sc-page-header">
@@ -52,8 +31,6 @@ export default async function MetasServerPage({
       <div className="p-6">
         <MetasPage
           campaigns={campaigns ?? []}
-          rules={rules ?? []}
-          participants={participantUsers}
           initialCampaignId={params.campaign_id ?? ''}
           initialRuleId={params.rule_id ?? ''}
           initialMonth={params.month ?? ''}

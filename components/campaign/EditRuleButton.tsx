@@ -19,6 +19,8 @@ interface Rule {
   sf_frequency?: string | null
   sf_run_time?: string | null
   sf_run_day?: number | null
+  value_type?: string | null
+  decimal_places?: number | null
 }
 
 interface Props {
@@ -43,6 +45,8 @@ export function EditRuleButton({ campaignId, rule }: Props) {
     sf_frequency: rule.sf_frequency ?? '',
     sf_run_time: rule.sf_run_time ?? '',
     sf_run_day: rule.sf_run_day != null ? String(rule.sf_run_day) : '',
+    value_type: rule.value_type ?? 'number',
+    decimal_places: String(rule.decimal_places ?? 0),
   })
 
   const isSF = form.data_origin === 'salesforce'
@@ -68,6 +72,8 @@ export function EditRuleButton({ campaignId, rule }: Props) {
       applies_to: form.applies_to,
       category: form.category,
       data_origin: form.data_origin,
+      value_type: form.value_type,
+      decimal_places: parseInt(form.decimal_places) || 0,
     }
     if (isSF) {
       payload.sf_soql = form.sf_soql || null
@@ -136,6 +142,25 @@ export function EditRuleButton({ campaignId, rule }: Props) {
                 <option value="behavior">Comportamento</option>
                 <option value="bonus">Bônus</option>
                 <option value="penalty">Penalidade</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Tipo de valor + Casas decimais */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div>
+              <label style={labelStyle}>Tipo de valor</label>
+              <select value={form.value_type} onChange={e => setForm(f => ({ ...f, value_type: e.target.value }))} style={{ ...inputStyle, cursor: 'pointer' }}>
+                <option value="number">Número</option>
+                <option value="currency">Monetário (R$)</option>
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>Casas decimais</label>
+              <select value={form.decimal_places} onChange={e => setForm(f => ({ ...f, decimal_places: e.target.value }))} style={{ ...inputStyle, cursor: 'pointer' }}>
+                <option value="0">0 — inteiro</option>
+                <option value="1">1 — ex: 1,5</option>
+                <option value="2">2 — ex: 1,50</option>
               </select>
             </div>
           </div>
