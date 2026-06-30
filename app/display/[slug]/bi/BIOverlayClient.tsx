@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { CelebrationOverlay } from '@/components/game/CelebrationOverlay'
@@ -93,7 +93,7 @@ export function BIOverlayClient() {
     setCelebQueue(rest)
   }, [celebration, celebQueue])
 
-  function handleCelebrationDone() {
+  const handleCelebrationDone = useCallback(() => {
     setCelebration(null)
     celebWaitingRef.current = true
     if (celebTimerRef.current) clearTimeout(celebTimerRef.current)
@@ -106,7 +106,7 @@ export function BIOverlayClient() {
         return rest
       })
     }, 30000)
-  }
+  }, [])
 
   if (authorized === false) {
     return (

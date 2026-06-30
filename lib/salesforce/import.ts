@@ -11,14 +11,14 @@ export type ImportResult = {
 }
 
 function getField(record: Record<string, unknown>, path: string): unknown {
-  const parts = path.split('.')
-  const lastKey = parts[parts.length - 1]
-  if (lastKey in record) return record[lastKey]
-  if (path in record) return record[path]
-  return parts.reduce<unknown>((acc, key) => {
+  // Try nested traversal first (e.g. CreatedBy.Name → record.CreatedBy.Name)
+  const traversed = path.split('.').reduce<unknown>((acc, key) => {
     if (acc !== null && typeof acc === 'object') return (acc as Record<string, unknown>)[key]
     return undefined
   }, record)
+  if (traversed !== undefined) return traversed
+  // Fall back to flat key (e.g. 'Owner.Name' stored as-is by jsforce)
+  return path in record ? record[path] : undefined
 }
 
 export async function importRule(ruleId: string, triggeredBy: string): Promise<ImportResult> {
@@ -148,7 +148,7 @@ export async function importRule(ruleId: string, triggeredBy: string): Promise<I
     const ownerNameField = aliasField.includes('.') ? aliasField.replace(/\.[^.]+$/, '.Name') : 'Name'
     const ownerName = String(getField(sfRow, ownerNameField) ?? getField(sfRow, 'Owner.Name') ?? getField(sfRow, 'Name') ?? '').trim() || null
     const accountName = String(getField(sfRow, 'Account.Name') ?? sfRow['AccountName'] ?? '').trim() || null
-    const description = String(sfRow['Description'] ?? sfRow['Subject'] ?? '').trim() || null
+    const description = String(sfRow['Description'] ?? sfRow['Subject'] ?? sfRow['Name'] ?? '').trim() || null
     const sfCreatedAt = sfRow['CreatedDate'] ? String(sfRow['CreatedDate']) : null
 
     const participant = alias ? participantList.find(p => p.sf_alias === alias) : undefined

@@ -191,6 +191,7 @@ function spawnConfetti(isFoul) {
 }
 
 function showCelebration(ev) {
+  celebBusy = true
   if (dismissTimer) clearTimeout(dismissTimer)
 
   const isFoul = ev.points < 0

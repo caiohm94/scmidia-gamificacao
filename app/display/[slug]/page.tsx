@@ -458,7 +458,7 @@ function DisplayPanel() {
     setCelebQueue(rest)
   }, [celebration, celebQueue])
 
-  function handleCelebrationDone() {
+  const handleCelebrationDone = useCallback(() => {
     setCelebration(null)
     celebWaitingRef.current = true
     if (celebTimerRef.current) clearTimeout(celebTimerRef.current)
@@ -471,7 +471,7 @@ function DisplayPanel() {
         return rest
       })
     }, 30000)
-  }
+  }, [])
 
   useEffect(() => {
     if (!authorized || celebration) return
