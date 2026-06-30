@@ -69,7 +69,7 @@ export default async function MetasPage({
         </div>
       )}
 
-      {[...byRule.entries()].map(([ruleId, ruleGoals]) => {
+      {[...byRule.entries()].sort(([, a], [, b]) => (a[0].scoring_rules?.name ?? '').localeCompare(b[0].scoring_rules?.name ?? '', 'pt-BR')).map(([ruleId, ruleGoals]) => {
         const rule = ruleGoals[0].scoring_rules
         const isMonthly = rule?.target_period === 'monthly'
         const isCumulative = rule?.is_cumulative ?? false

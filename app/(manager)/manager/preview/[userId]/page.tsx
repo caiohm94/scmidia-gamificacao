@@ -144,7 +144,7 @@ export default async function PreviewPage({
       arr.push(g)
       byRuleMap.set(g.scoring_rule_id, arr)
     }
-    todayPreviewGoals = [...byRuleMap.entries()].map(([, entries]) => {
+    todayPreviewGoals = ([...byRuleMap.entries()].map(([, entries]) => {
       const rule = entries[0].scoring_rules
       if (rule?.is_cumulative) {
         const totalActual = entries.reduce((s, g) => s + (g.actual_value ?? 0), 0)
@@ -155,7 +155,8 @@ export default async function PreviewPage({
         return entries.find(g => g.period_date === monthStart) ?? entries[0]
       }
       return entries.find(g => g.period_date === todayStr) ?? entries[0]
-    }).filter(Boolean) as GoalWithRule[]
+    }).filter(Boolean) as GoalWithRule[])
+      .sort((a, b) => (a.scoring_rules?.name ?? '').localeCompare(b.scoring_rules?.name ?? '', 'pt-BR'))
   }
 
   // --- FEED data — filtered to this user only (mirror participant feed) ---
@@ -359,7 +360,7 @@ export default async function PreviewPage({
                   <p style={{ color: muted, fontSize: '0.85rem' }}>Nenhuma meta definida para este mês.</p>
                 </div>
               )}
-              {[...byRule.entries()].map(([ruleId, ruleGoals]) => {
+              {[...byRule.entries()].sort(([, a], [, b]) => (a[0].scoring_rules?.name ?? '').localeCompare(b[0].scoring_rules?.name ?? '', 'pt-BR')).map(([ruleId, ruleGoals]) => {
                 const rule = ruleGoals[0].scoring_rules
                 const isMonthly = rule?.target_period === 'monthly'
                 const isCumulative = rule?.is_cumulative ?? false

@@ -86,7 +86,7 @@ export default async function ParticipantDashboard() {
       arr.push(g)
       byRule.set(g.scoring_rule_id, arr)
     }
-    todayGoals = [...byRule.entries()].map(([, entries]) => {
+    todayGoals = ([...byRule.entries()].map(([, entries]) => {
       const rule = entries[0].scoring_rules
       if (rule?.is_cumulative) {
         const totalActual = entries.reduce((s, g) => s + (g.actual_value ?? 0), 0)
@@ -98,7 +98,8 @@ export default async function ParticipantDashboard() {
         return entries.find(g => g.period_date === monthStart) ?? entries[0]
       }
       return entries.find(g => g.period_date === today) ?? entries[0]
-    }).filter(g => g !== undefined) as GoalWithRule[]
+    }).filter(g => g !== undefined) as GoalWithRule[])
+      .sort((a, b) => (a.scoring_rules?.name ?? '').localeCompare(b.scoring_rules?.name ?? '', 'pt-BR'))
   }
 
   // Fetch participant photo for active campaign
