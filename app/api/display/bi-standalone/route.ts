@@ -110,10 +110,25 @@ function getAudio() {
   return audioCtx
 }
 
-document.addEventListener('click', () => {
+// Try to unlock immediately on load (works on some browsers/local files)
+function tryUnlock() {
   const ctx = getAudio()
-  if (ctx && ctx.state === 'suspended') ctx.resume()
-}, { once: false })
+  if (ctx && ctx.state === 'suspended') ctx.resume().catch(()=>{})
+}
+tryUnlock()
+// Also retry every 2s until unlocked (handles cases where iframe absorbs clicks)
+const unlockInterval = setInterval(() => {
+  const ctx = getAudio()
+  if (!ctx || ctx.state === 'running') { clearInterval(unlockInterval); return }
+  ctx.resume().catch(()=>{})
+}, 2000)
+// And on any window-level event
+['click','keydown','touchstart','pointerdown'].forEach(evt =>
+  window.addEventListener(evt, () => {
+    const ctx = getAudio()
+    if (ctx && ctx.state === 'suspended') ctx.resume().catch(()=>{})
+  }, { passive: true })
+)
 
 function playVuvuzela(ctx) {
   const t = ctx.currentTime, BASE = 233, SUSTAIN = 3.0
