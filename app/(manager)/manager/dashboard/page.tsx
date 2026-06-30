@@ -1,65 +1,111 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { requireRole } from '@/lib/auth/helpers'
-import { subDays, format } from 'date-fns'
-import { Users, Trophy, Zap, AlertTriangle, LayoutDashboard } from 'lucide-react'
+import { getRanking } from '@/lib/rankings/queries'
+import { LayoutDashboard, Users, Zap, AlertTriangle } from 'lucide-react'
+import { DashboardParticipantList, type ParticipantRow } from '@/components/manager/DashboardParticipantList'
+import { CampaignSelector } from '@/components/manager/CampaignSelector'
+import { todayBrazil } from '@/lib/goals/helpers'
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 
-type RecentPoint = {
-  id: string
-  points: number
-  created_at: string
-  users: { name: string } | null
-  scoring_rules: { name: string } | null
-  campaigns: { name: string } | null
-}
+type Props = { searchParams: Promise<{ campaign_id?: string }> }
 
-type InactiveParticipant = {
-  id: string
-  last_activity_date: string | null
-  users: { name: string } | null
-  campaigns: { name: string } | null
-}
-
-export default async function ManagerDashboard() {
+export default async function ManagerDashboard({ searchParams }: Props) {
   await requireRole('manager')
+  const params = await searchParams
   const supabase = await createClient()
-  const threeDaysAgo = subDays(new Date(), 3).toISOString().slice(0, 10)
+  const admin = createAdminClient()
 
-  const [
-    { count: totalUsers },
-    { count: activeCampaigns },
-    rawPoints,
-    rawInactive,
-  ] = await Promise.all([
-    supabase.from('users').select('*', { count: 'exact', head: true }).eq('status', 'active'),
-    supabase.from('campaigns').select('*', { count: 'exact', head: true }).eq('status', 'active'),
-    supabase
-      .from('point_transactions')
-      .select('id, points, created_at, users!user_id(name), scoring_rules(name), campaigns(name)')
-      .order('created_at', { ascending: false })
-      .limit(10),
-    supabase
-      .from('campaign_participants')
-      .select('id, last_activity_date, users(name), campaigns(name)')
-      .lt('last_activity_date', threeDaysAgo)
-      .not('last_activity_date', 'is', null),
+  const { data: campaigns } = await supabase.from('campaigns').select('id, name').eq('status', 'active').order('name')
+  const campaignList = campaigns ?? []
+  const selectedCampaignId = params.campaign_id ?? campaignList[0]?.id ?? null
+  const selectedCampaign = campaignList.find(c => c.id === selectedCampaignId) ?? null
+
+  if (!selectedCampaignId) {
+    return (
+      <div>
+        <div className="sc-page-header">
+          <div className="flex items-center gap-3">
+            <div style={{ width: 36, height: 36, borderRadius: '0 0.5rem 0.5rem 0.5rem', background: 'rgba(141,178,60,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <LayoutDashboard size={18} color="#8DB23C" />
+            </div>
+            <h1 className="sc-page-title">Dashboard</h1>
+          </div>
+        </div>
+        <div className="p-6">
+          <p style={{ color: 'rgba(63,62,62,0.45)', fontSize: '0.85rem' }}>Nenhuma campanha ativa.</p>
+        </div>
+      </div>
+    )
+  }
+
+  const today = todayBrazil()
+  const [y, mo] = today.slice(0, 7).split('-').map(Number)
+  const monthStart = `${y}-${String(mo).padStart(2, '0')}-01`
+  const lastDay = new Date(y, mo, 0).getDate()
+  const monthEnd = `${y}-${String(mo).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+  const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+
+  const [ranking, kpiCount, kpiPts, kpiInactive, goalsRaw, photosRaw] = await Promise.all([
+    getRanking(supabase, { campaign_id: selectedCampaignId }),
+    admin.from('campaign_participants').select('*', { count: 'exact', head: true }).eq('campaign_id', selectedCampaignId),
+    admin.from('point_transactions').select('points').eq('campaign_id', selectedCampaignId).eq('event_date', today).eq('status', 'active'),
+    admin.from('campaign_participants').select('*', { count: 'exact', head: true }).eq('campaign_id', selectedCampaignId).lt('last_activity_date', threeDaysAgo).not('last_activity_date', 'is', null),
+    admin.from('participant_goals')
+      .select('user_id, actual_value, target_value, period_date, scoring_rules(name, target_period, is_cumulative)')
+      .eq('campaign_id', selectedCampaignId)
+      .gte('period_date', monthStart)
+      .lte('period_date', monthEnd),
+    admin.from('campaign_participants').select('user_id, photo_url').eq('campaign_id', selectedCampaignId),
   ])
 
-  const recentPoints = (rawPoints.data ?? []) as RecentPoint[]
-  const inactiveParticipants = (rawInactive.data ?? []) as InactiveParticipant[]
+  const pointsToday = (kpiPts.data ?? []).reduce((s: number, p: { points: number }) => s + p.points, 0)
 
-  const todayStr = new Date().toISOString().slice(0, 10)
-  const pointsToday = recentPoints.filter(p => p.created_at.slice(0, 10) === todayStr).length
+  // Build photo map: campaign photo overrides avatar
+  const photoMap = new Map<string, string | null>()
+  for (const cp of (photosRaw.data ?? [])) photoMap.set(cp.user_id, cp.photo_url)
+
+  // Build mini-goals map: up to 2 per user (daily first, then monthly)
+  type GoalRaw = {
+    user_id: string; actual_value: number | null; target_value: number; period_date: string
+    scoring_rules: { name: string; target_period: string | null; is_cumulative: boolean } | null
+  }
+  const goalsByUser = new Map<string, { rule_name: string; actual: number; target: number }[]>()
+  for (const g of (goalsRaw.data ?? []) as GoalRaw[]) {
+    if (!g.scoring_rules) continue
+    const r = g.scoring_rules
+    const isDaily = r.target_period !== 'monthly' && !r.is_cumulative && g.period_date === today
+    const isMonthly = (r.target_period === 'monthly' || r.is_cumulative) && g.period_date === monthStart
+    if (!isDaily && !isMonthly) continue
+    const arr = goalsByUser.get(g.user_id) ?? []
+    if (!arr.some(x => x.rule_name === r.name)) {
+      arr.push({ rule_name: r.name, actual: g.actual_value ?? 0, target: g.target_value })
+    }
+    goalsByUser.set(g.user_id, arr)
+  }
+
+  const participants: ParticipantRow[] = ranking.map(r => ({
+    user_id: r.user_id,
+    name: r.name,
+    avatar_url: photoMap.get(r.user_id) ?? r.avatar_url,
+    position: r.position,
+    total_points: r.total_points,
+    current_streak: r.current_streak,
+    team_name: r.team_name,
+    team_color: r.team_color,
+    function: r.function,
+    goals: (goalsByUser.get(r.user_id) ?? []).slice(0, 2),
+  }))
 
   const statCards = [
-    { label: 'Usuários Ativos', value: totalUsers ?? 0, icon: Users, color: '#8DB23C', bg: 'rgba(141,178,60,0.1)' },
-    { label: 'Campanhas Ativas', value: activeCampaigns ?? 0, icon: Trophy, color: '#229877', bg: 'rgba(34,152,119,0.1)' },
-    { label: 'Pontos Hoje', value: pointsToday, icon: Zap, color: '#BACB3A', bg: 'rgba(186,203,58,0.1)' },
-    { label: 'Alertas', value: inactiveParticipants.length, icon: AlertTriangle, color: '#e07b39', bg: 'rgba(224,123,57,0.1)' },
+    { label: 'Participantes', value: String(kpiCount.count ?? 0), icon: Users, color: '#8DB23C', bg: 'rgba(141,178,60,0.1)' },
+    { label: 'Pontos hoje', value: pointsToday.toLocaleString('pt-BR'), icon: Zap, color: '#BACB3A', bg: 'rgba(186,203,58,0.1)' },
+    { label: 'Inativos (+3d)', value: String(kpiInactive.count ?? 0), icon: AlertTriangle, color: '#e07b39', bg: 'rgba(224,123,57,0.1)' },
   ]
 
   return (
     <div>
-      {/* Page header */}
       <div className="sc-page-header">
         <div className="flex items-center gap-3">
           <div style={{ width: 36, height: 36, borderRadius: '0 0.5rem 0.5rem 0.5rem', background: 'rgba(141,178,60,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -68,78 +114,40 @@ export default async function ManagerDashboard() {
           <h1 className="sc-page-title">Dashboard</h1>
         </div>
         <p style={{ fontSize: '0.8rem', color: 'rgba(63,62,62,0.45)', fontFamily: 'var(--font-outfit, sans-serif)' }}>
-          {format(new Date(), "EEEE, dd 'de' MMMM 'de' yyyy", { locale: (await import('date-fns/locale/pt-BR')).ptBR })}
+          {format(new Date(), "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
         </p>
       </div>
 
       <div className="p-6 space-y-5">
-        {/* Stat cards */}
-        <div className="grid grid-cols-4 gap-4">
-          {statCards.map(card => (
-            <div key={card.label} className="sc-card">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p style={{ fontSize: '0.75rem', color: 'rgba(63,62,62,0.5)', fontFamily: 'var(--font-outfit, sans-serif)', marginBottom: '0.25rem' }}>{card.label}</p>
-                  <p style={{ fontSize: '2rem', fontWeight: 700, color: '#3F3E3E', fontFamily: 'var(--font-outfit, sans-serif)', lineHeight: 1 }}>{card.value}</p>
-                </div>
-                <div style={{ width: 36, height: 36, borderRadius: '0 0.5rem 0.5rem 0.5rem', background: card.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <card.icon size={18} color={card.color} />
+        {/* Campaign selector + KPI cards */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+          <CampaignSelector campaigns={campaignList} selected={selectedCampaignId} />
+          <div style={{ display: 'flex', gap: '0.75rem', flex: 1, flexWrap: 'wrap' }}>
+            {statCards.map(card => (
+              <div key={card.label} className="sc-card" style={{ flex: 1, minWidth: 110 }}>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p style={{ fontSize: '0.72rem', color: 'rgba(63,62,62,0.5)', fontFamily: 'var(--font-outfit, sans-serif)', marginBottom: '0.2rem' }}>{card.label}</p>
+                    <p style={{ fontSize: '1.55rem', fontWeight: 700, color: '#3F3E3E', fontFamily: 'var(--font-outfit, sans-serif)', lineHeight: 1, margin: 0 }}>{card.value}</p>
+                  </div>
+                  <div style={{ width: 32, height: 32, borderRadius: '0 0.4rem 0.4rem 0.4rem', background: card.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <card.icon size={16} color={card.color} />
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
-        {/* Inactive alert */}
-        {inactiveParticipants.length > 0 && (
-          <div style={{ background: 'rgba(224,123,57,0.07)', border: '1px solid rgba(224,123,57,0.25)', borderRadius: '0 0.75rem 0.75rem 0.75rem', padding: '1rem 1.25rem' }}>
-            <p style={{ fontSize: '0.8rem', fontWeight: 600, color: '#c0622a', fontFamily: 'var(--font-outfit, sans-serif)', marginBottom: '0.75rem' }}>
-              Participantes sem pontuação há +3 dias
-            </p>
-            <div className="space-y-1.5">
-              {inactiveParticipants.slice(0, 5).map(p => (
-                <div key={p.id} className="flex justify-between text-sm" style={{ color: 'rgba(63,62,62,0.7)' }}>
-                  <span style={{ fontWeight: 500 }}>{p.users?.name}</span>
-                  <span style={{ color: 'rgba(63,62,62,0.45)' }}>{p.campaigns?.name}</span>
-                  <span style={{ color: 'rgba(63,62,62,0.4)', fontSize: '0.75rem' }}>Último: {p.last_activity_date}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+        {/* Subheading */}
+        {selectedCampaign && (
+          <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'rgba(63,62,62,0.4)', fontFamily: 'var(--font-outfit, sans-serif)', textTransform: 'uppercase', letterSpacing: '0.07em', margin: 0 }}>
+            {selectedCampaign.name} — {participants.length} participante{participants.length !== 1 ? 's' : ''}
+          </p>
         )}
 
-        {/* Recent points */}
-        <div className="sc-card">
-          <h2 className="sc-heading text-sm mb-4" style={{ fontSize: '0.875rem' }}>Lançamentos Recentes</h2>
-          {recentPoints.length === 0 ? (
-            <p style={{ fontSize: '0.85rem', color: 'rgba(63,62,62,0.4)', textAlign: 'center', padding: '2rem 0' }}>Nenhum lançamento ainda.</p>
-          ) : (
-            <div className="space-y-0">
-              {recentPoints.map((pt, i) => (
-                <div
-                  key={pt.id}
-                  className="flex items-center justify-between py-2.5"
-                  style={{ borderBottom: i < recentPoints.length - 1 ? '1px solid rgba(63,62,62,0.07)' : 'none' }}
-                >
-                  <span style={{ fontWeight: 500, fontSize: '0.875rem', color: '#3F3E3E', minWidth: 120 }}>{pt.users?.name}</span>
-                  <span style={{ fontSize: '0.8rem', color: 'rgba(63,62,62,0.55)', flex: 1, marginLeft: '1rem' }}>{pt.scoring_rules?.name ?? 'Bônus'}</span>
-                  <span
-                    style={{
-                      fontFamily: 'var(--font-outfit, sans-serif)', fontWeight: 600, fontSize: '0.8rem',
-                      color: pt.points > 0 ? '#5C7435' : '#c0622a',
-                      background: pt.points > 0 ? 'rgba(92,116,53,0.1)' : 'rgba(192,98,42,0.1)',
-                      padding: '0.15rem 0.55rem', borderRadius: '0 0.3rem 0.3rem 0.3rem',
-                      marginRight: '1rem',
-                    }}
-                  >
-                    {pt.points > 0 ? '+' : ''}{pt.points} pts
-                  </span>
-                  <span style={{ fontSize: '0.72rem', color: 'rgba(63,62,62,0.35)', whiteSpace: 'nowrap' }}>{format(new Date(pt.created_at), 'dd/MM HH:mm')}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        {/* Participant list */}
+        <DashboardParticipantList participants={participants} campaignId={selectedCampaignId} />
       </div>
     </div>
   )
