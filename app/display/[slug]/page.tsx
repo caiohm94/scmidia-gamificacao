@@ -358,6 +358,7 @@ function DisplayPanel() {
   const [ranking, setRanking] = useState<CampaignRanking[]>([])
   const [feedEvents, setFeedEvents] = useState<FeedEventRow[]>([])
   const [celebration, setCelebration] = useState<CelebrationData | null>(null)
+  const [celebQueue, setCelebQueue] = useState<CelebrationData[]>([])
   const [view, setView] = useState<View>('ranking')
   const [viewKey, setViewKey] = useState(0)
   const [authorized, setAuthorized] = useState<boolean | null>(null)
@@ -366,6 +367,8 @@ function DisplayPanel() {
   const supabase = createClient()
   const campaignRef = useRef<CampaignRow | null>(null)
   const audioCtxRef = useRef<AudioContext | null>(null)
+  const celebWaitingRef = useRef(false)
+  const celebTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     function unlock() {
@@ -433,7 +436,8 @@ function DisplayPanel() {
             supabase.from('campaign_participants').select('photo_url').eq('user_id', ev.user_id).eq('campaign_id', campRow.id).single(),
           ])
           const photo = (cp as { photo_url: string | null } | null)?.photo_url ?? undefined
-          setCelebration({ user_id: ev.user_id, points: ev.points, rule_name: ev.rule_name ?? '', message: ev.message ?? '', user_name: (u as { name: string } | null)?.name, avatar_url: photo })
+          const data: CelebrationData = { user_id: ev.user_id, points: ev.points, rule_name: ev.rule_name ?? '', message: ev.message ?? '', user_name: (u as { name: string } | null)?.name, avatar_url: photo }
+          setCelebQueue(prev => [...prev, data])
         }).subscribe()
     }
     init()
@@ -445,6 +449,29 @@ function DisplayPanel() {
     return () => { clearInterval(poll); supabase.removeAllChannels() }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, token])
+
+  // Process celebration queue: show next when idle and not in 30s gap
+  useEffect(() => {
+    if (celebration !== null || celebWaitingRef.current || celebQueue.length === 0) return
+    const [next, ...rest] = celebQueue
+    setCelebration(next)
+    setCelebQueue(rest)
+  }, [celebration, celebQueue])
+
+  function handleCelebrationDone() {
+    setCelebration(null)
+    celebWaitingRef.current = true
+    if (celebTimerRef.current) clearTimeout(celebTimerRef.current)
+    celebTimerRef.current = setTimeout(() => {
+      celebWaitingRef.current = false
+      setCelebQueue(prev => {
+        if (prev.length === 0) return prev
+        const [next, ...rest] = prev
+        setCelebration(next)
+        return rest
+      })
+    }, 30000)
+  }
 
   useEffect(() => {
     if (!authorized || celebration) return
@@ -478,7 +505,7 @@ function DisplayPanel() {
       display: 'flex', flexDirection: 'column', fontFamily: 'Outfit, system-ui, sans-serif',
     }}>
       <style>{CSS}</style>
-      <CelebrationOverlay event={celebration} onDone={() => setCelebration(null)} audioCtxRef={audioCtxRef} />
+      <CelebrationOverlay event={celebration} onDone={handleCelebrationDone} audioCtxRef={audioCtxRef} />
 
       {/* Animated top accent */}
       <div style={{ height: 3, background: 'linear-gradient(90deg, #5C7435, #8DB23C, #BACB3A, #FFDF00, #BACB3A, #8DB23C, #5C7435)', backgroundSize: '200% 100%', animation: 'shimmer 4s linear infinite' }} />

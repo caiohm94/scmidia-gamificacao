@@ -14,8 +14,11 @@ export function BIOverlayClient() {
   const biUrl = searchParams.get('bi') ?? ''
 
   const [celebration, setCelebration] = useState<CelebrationData | null>(null)
+  const [celebQueue, setCelebQueue] = useState<CelebrationData[]>([])
   const [authorized, setAuthorized] = useState<boolean | null>(null)
   const audioCtxRef = useRef<AudioContext | null>(null)
+  const celebWaitingRef = useRef(false)
+  const celebTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const supabase = createClient()
 
   // Unlock AudioContext on any click (browser autoplay policy)
@@ -67,20 +70,43 @@ export function BIOverlayClient() {
           const userName = (uRes.data as { name: string } | null)?.name
           const photoUrl = (cpRes.data as { photo_url: string | null } | null)?.photo_url ?? undefined
 
-          setCelebration({
+          setCelebQueue(prev => [...prev, {
             user_id: ev.user_id,
             points: ev.points,
             rule_name: ev.rule_name ?? '',
             message: ev.message ?? '',
             user_name: userName,
             avatar_url: photoUrl,
-          })
+          }])
         })
         .subscribe()
     }
 
     init()
   }, [slug, token])
+
+  // Process celebration queue
+  useEffect(() => {
+    if (celebration !== null || celebWaitingRef.current || celebQueue.length === 0) return
+    const [next, ...rest] = celebQueue
+    setCelebration(next)
+    setCelebQueue(rest)
+  }, [celebration, celebQueue])
+
+  function handleCelebrationDone() {
+    setCelebration(null)
+    celebWaitingRef.current = true
+    if (celebTimerRef.current) clearTimeout(celebTimerRef.current)
+    celebTimerRef.current = setTimeout(() => {
+      celebWaitingRef.current = false
+      setCelebQueue(prev => {
+        if (prev.length === 0) return prev
+        const [next, ...rest] = prev
+        setCelebration(next)
+        return rest
+      })
+    }, 30000)
+  }
 
   if (authorized === false) {
     return (
@@ -130,7 +156,7 @@ export function BIOverlayClient() {
       />
       <CelebrationOverlay
         event={celebration}
-        onDone={() => setCelebration(null)}
+        onDone={handleCelebrationDone}
         audioCtxRef={audioCtxRef}
       />
     </div>

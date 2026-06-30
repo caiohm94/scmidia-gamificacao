@@ -75,10 +75,18 @@ export async function GET(request: NextRequest) {
 <body>
 <iframe id="bi-frame" src="${biUrl || 'about:blank'}" allow="fullscreen"></iframe>
 
-<!-- Status bar: connection + test button (bottom-right corner) -->
+<!-- Sound unlock overlay: shown until user clicks -->
+<div id="sound-unlock" onclick="unlockSound()" style="position:fixed;inset:0;z-index:20000;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,0.82);cursor:pointer;font-family:sans-serif">
+  <div style="font-size:4rem;margin-bottom:1rem">🔊</div>
+  <div style="color:#fff;font-size:1.4rem;font-weight:700;margin-bottom:.5rem">Clique para ativar o som</div>
+  <div style="color:rgba(255,255,255,.5);font-size:.9rem">Toque em qualquer lugar para começar</div>
+</div>
+
+<!-- Status bar: connection + queue + test buttons (bottom-right corner) -->
 <div id="statusbar" style="position:fixed;bottom:12px;right:12px;z-index:8888;display:flex;align-items:center;gap:8px;background:rgba(0,0,0,0.55);padding:6px 10px;border-radius:6px;font-family:sans-serif;font-size:11px;color:#fff;backdrop-filter:blur(4px)">
   <span id="conn-dot" style="width:8px;height:8px;border-radius:50%;background:#555;display:inline-block"></span>
   <span id="conn-label">conectando…</span>
+  <span id="queue-label" style="display:none;background:#8DB23C;border-radius:4px;padding:1px 6px;font-size:10px">fila: 0</span>
   <button onclick="testCelebration(false)" style="margin-left:6px;padding:2px 8px;font-size:10px;background:#8DB23C;border:none;border-radius:4px;color:#fff;cursor:pointer">⚽ Testar</button>
   <button onclick="testCelebration(true)"  style="padding:2px 8px;font-size:10px;background:#ef4444;border:none;border-radius:4px;color:#fff;cursor:pointer">🟥 Testar</button>
 </div>
@@ -101,6 +109,7 @@ const SUPABASE_URL  = '${supabaseUrl}'
 const SUPABASE_ANON = '${supabaseAnon}'
 const CAMPAIGN_ID   = '${campaignId}'
 const DURATION_MS   = 7000
+const QUEUE_GAP_MS  = 30000
 
 const COLORS_GOAL = ['#FFDF00','#8DB23C','#BACB3A','#FFFFFF','#FF6B35','#FFD700','#5C7435','#f0f0f0']
 const COLORS_FOUL = ['#ef4444','#dc2626','#b91c1c','#FFFFFF','#f97316','#fca5a5','#7f1d1d','#fff']
@@ -109,34 +118,27 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON)
 
 let audioCtx = null
 let dismissTimer = null
+let celebQueue = []
+let celebBusy = false
 
 function getAudio() {
   if (audioCtx && audioCtx.state !== 'closed') return audioCtx
-  try {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)()
-  } catch(e) {}
+  try { audioCtx = new (window.AudioContext || window.webkitAudioContext)() } catch(e) {}
   return audioCtx
 }
 
-// Try to unlock immediately on load (works on some browsers/local files)
-function tryUnlock() {
+function unlockSound() {
   const ctx = getAudio()
-  if (ctx && ctx.state === 'suspended') ctx.resume().catch(()=>{})
+  if (ctx) ctx.resume().catch(()=>{})
+  document.getElementById('sound-unlock').style.display = 'none'
 }
-tryUnlock()
-// Also retry every 2s until unlocked (handles cases where iframe absorbs clicks)
-const unlockInterval = setInterval(() => {
-  const ctx = getAudio()
-  if (!ctx || ctx.state === 'running') { clearInterval(unlockInterval); return }
-  ctx.resume().catch(()=>{})
-}, 2000)
-// And on any window-level event
-['click','keydown','touchstart','pointerdown'].forEach(evt =>
-  window.addEventListener(evt, () => {
-    const ctx = getAudio()
-    if (ctx && ctx.state === 'suspended') ctx.resume().catch(()=>{})
-  }, { passive: true })
-)
+
+function updateQueueLabel() {
+  const el = document.getElementById('queue-label')
+  if (!el) return
+  if (celebQueue.length > 0) { el.style.display = 'inline'; el.textContent = 'fila: ' + celebQueue.length }
+  else { el.style.display = 'none' }
+}
 
 function playVuvuzela(ctx) {
   const t = ctx.currentTime, BASE = 233, SUSTAIN = 3.0
@@ -237,12 +239,30 @@ function showCelebration(ev) {
   dismissTimer = setTimeout(() => {
     overlay.classList.remove('show')
     overlay.className = overlay.className.replace('show','').trim()
+    celebBusy = true
+    setTimeout(() => {
+      celebBusy = false
+      if (celebQueue.length > 0) {
+        const next = celebQueue.shift()
+        updateQueueLabel()
+        showCelebration(next)
+      }
+    }, QUEUE_GAP_MS)
   }, DURATION_MS)
+}
+
+function enqueueCelebration(ev) {
+  if (!celebBusy && celebQueue.length === 0) {
+    showCelebration(ev)
+  } else {
+    celebQueue.push(ev)
+    updateQueueLabel()
+  }
 }
 
 // Test function (buttons in status bar)
 function testCelebration(isFoul) {
-  showCelebration({
+  enqueueCelebration({
     user_id: 'test',
     points: isFoul ? -10 : 50,
     rule_name: isFoul ? 'Falta' : 'Ligação Realizada',
@@ -278,7 +298,7 @@ sb.channel('bi-overlay-' + CAMPAIGN_ID)
       sb.from('users').select('name').eq('id', ev.user_id).single(),
       sb.from('campaign_participants').select('photo_url').eq('user_id', ev.user_id).eq('campaign_id', CAMPAIGN_ID).single()
     ])
-    showCelebration({
+    enqueueCelebration({
       ...ev,
       user_name: uRes.data?.name,
       avatar_url: cpRes.data?.photo_url || undefined
