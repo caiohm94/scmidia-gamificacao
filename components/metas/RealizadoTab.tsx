@@ -12,6 +12,7 @@ interface Props {
   participants: Participant[]
   valueType: string
   decimalPlaces: number
+  targetPeriod?: string
 }
 
 function todayDate() {
@@ -28,7 +29,8 @@ function formatDateLabel(dateStr: string): string {
   return new Date(dateStr + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
-export function RealizadoTab({ ruleId, campaignId, participants, valueType, decimalPlaces }: Props) {
+export function RealizadoTab({ ruleId, campaignId, participants, valueType, decimalPlaces, targetPeriod }: Props) {
+  const isMonthly = targetPeriod === 'monthly'
   const [selectedDate, setSelectedDate] = useState(todayDate())
   const [goals, setGoals] = useState<ParticipantGoalRow[]>([])
   const [actualInputs, setActualInputs] = useState<Record<string, string>>({})
@@ -58,6 +60,15 @@ export function RealizadoTab({ ruleId, campaignId, participants, valueType, deci
   useEffect(() => { load() }, [load])
 
   function getGoalForDate(userId: string) {
+    // For monthly rules: first look for a daily entry on selectedDate,
+    // then fall back to the monthly record (stored on the 1st of the month).
+    if (isMonthly) {
+      const daily = goals.find(g => g.user_id === userId && g.period_date === selectedDate)
+      if (daily) return daily
+      const [y, mo] = selectedDate.split('-')
+      const monthlyDate = `${y}-${mo}-01`
+      return goals.find(g => g.user_id === userId && g.period_date === monthlyDate)
+    }
     return goals.find(g => g.user_id === userId && g.period_date === selectedDate)
   }
 
@@ -78,11 +89,15 @@ export function RealizadoTab({ ruleId, campaignId, participants, valueType, deci
         if (!goal?.target_value || val === undefined || val === '') return null
         const num = parseFloat(val.replace(',', '.'))
         if (isNaN(num)) return null
+        // Monthly rules: always upsert on the monthly record (1st of month)
+        // so the participant always sees the latest total vs the monthly target.
+        const [y, mo] = selectedDate.split('-')
+        const saveDate = isMonthly ? `${y}-${mo}-01` : selectedDate
         return {
           scoring_rule_id: ruleId,
           campaign_id: campaignId,
           user_id: p.id,
-          period_date: selectedDate,
+          period_date: saveDate,
           target_value: goal.target_value,
           actual_value: num,
         }

@@ -162,6 +162,7 @@ export function MetasPage({ campaigns, initialCampaignId, initialRuleId, initial
               participants={filteredParticipants}
               valueType={selectedRule?.value_type ?? 'number'}
               decimalPlaces={selectedRule?.decimal_places ?? 0}
+              targetPeriod={selectedRule?.target_period ?? 'daily'}
             />
           )}
         </>
