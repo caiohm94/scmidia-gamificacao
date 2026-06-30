@@ -3,6 +3,7 @@ import { requireRole } from '@/lib/auth/helpers'
 import { getRanking } from '@/lib/rankings/queries'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { BarChart3, Download, ExternalLink } from 'lucide-react'
+import Image from 'next/image'
 import Link from 'next/link'
 import type { CampaignRanking } from '@/types/database'
 
@@ -57,7 +58,7 @@ function RankingList({ rows }: { rows: CampaignRanking[] }) {
               border: '1.5px solid rgba(63,62,62,0.08)',
             }}>
               {row.avatar_url ? (
-                <img src={row.avatar_url} alt={row.name ?? ''} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }} />
+                <Image src={row.avatar_url} alt={row.name ?? ''} width={112} height={112} priority={row.position <= 5} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }} />
               ) : (
                 <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg,#8DB23C,#5C7435)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', fontWeight: 800, color: '#fff', fontFamily: 'var(--font-outfit)' }}>
                   {row.name?.charAt(0).toUpperCase() ?? '?'}
