@@ -313,8 +313,8 @@ function FeedView({ events, viewKey }: { events: FeedEventRow[]; viewKey: number
                   <span style={{ fontWeight: 700 }}>{String(p.user_name ?? '')}</span>
                   {' '}{feedLabels[ev.event_type] ?? ev.event_type}
                   {ev.event_type === 'point_earned' && p.points != null && (
-                    <span style={{ marginLeft: '0.4rem', color: '#FFDF00', fontWeight: 900, fontSize: '1.05rem' }}>
-                      +{String(p.points)} pts
+                    <span style={{ marginLeft: '0.4rem', color: (p.points as number) < 0 ? '#f87171' : '#FFDF00', fontWeight: 900, fontSize: '1.05rem' }}>
+                      {(p.points as number) > 0 ? '+' : ''}{String(p.points)} pts
                     </span>
                   )}
                 </p>

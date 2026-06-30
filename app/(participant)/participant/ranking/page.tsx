@@ -20,7 +20,7 @@ export default async function ParticipantRankingPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">🏆 {campaign.name} — Ranking</h1>
+      <h1 className="text-2xl font-bold">🏆 {campaign.name} — Classificação</h1>
       <Tabs defaultValue="overall">
         <TabsList className="bg-gray-900">
           <TabsTrigger value="overall">Geral</TabsTrigger>
