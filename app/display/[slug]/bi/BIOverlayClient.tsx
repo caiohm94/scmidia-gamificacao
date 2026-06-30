@@ -90,28 +90,44 @@ export function BIOverlayClient() {
     )
   }
 
-  if (!biUrl) {
+  const downloadUrl = `/api/display/bi-standalone?slug=${slug}&token=${encodeURIComponent(token)}&bi=${encodeURIComponent(biUrl)}`
+
+  // Mixed content warning: page is HTTPS but BI is HTTP — iframe won't load.
+  // Show instructions to use the standalone HTML file instead.
+  const isHttpBi = biUrl.startsWith('http://')
+
+  if (isHttpBi || !biUrl) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0a0a0a', color: 'rgba(255,255,255,0.4)', fontFamily: 'sans-serif', textAlign: 'center', padding: '2rem' }}>
-        <div>
-          <p style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>Parâmetro <code>bi</code> ausente na URL.</p>
-          <p style={{ fontSize: '0.8rem', opacity: 0.6 }}>Exemplo: /display/slug/bi?token=...&bi=http://seu-painel.com</p>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0d1117', color: '#fff', fontFamily: 'sans-serif', textAlign: 'center', padding: '2rem' }}>
+        <div style={{ maxWidth: 520 }}>
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📥</div>
+          <h2 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '0.75rem' }}>Arquivo para TV</h2>
+          <p style={{ fontSize: '0.88rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.6, marginBottom: '1.5rem' }}>
+            O painel Power BI usa <strong>HTTP</strong>, mas esta página usa HTTPS — o navegador bloqueia o iframe por segurança.
+            <br/><br/>
+            Baixe o arquivo abaixo, salve na TV e abra diretamente no Chrome. Ele mostra o Power BI normalmente e exibe as celebrações em cima quando um ponto é lançado.
+          </p>
+          <a href={downloadUrl} download style={{
+            display: 'inline-block', padding: '0.75rem 1.5rem',
+            background: '#8DB23C', color: '#fff', borderRadius: '0 0.5rem 0.5rem 0.5rem',
+            fontWeight: 700, fontSize: '0.9rem', textDecoration: 'none',
+          }}>
+            ⬇ Baixar arquivo HTML da TV
+          </a>
         </div>
       </div>
     )
   }
 
+  // HTTPS BI URL — iframe works normally
   return (
     <div style={{ position: 'fixed', inset: 0, background: '#000' }}>
-      {/* Power BI iframe — fullscreen */}
       <iframe
         src={biUrl}
         style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
         allow="fullscreen"
         title="Power BI"
       />
-
-      {/* Celebration overlay sits on top of the iframe */}
       <CelebrationOverlay
         event={celebration}
         onDone={() => setCelebration(null)}
