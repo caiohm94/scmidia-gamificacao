@@ -10,8 +10,8 @@ export default async function PointsPage() {
 
   const [{ data: campaigns }, { data: users }, { data: rules }, { data: participants }] = await Promise.all([
     supabase.from('campaigns').select('id, name').eq('status', 'active'),
-    supabase.from('users').select('id, name').eq('status', 'active').order('name'),
-    supabase.from('scoring_rules').select('id, name, points, campaign_id').eq('is_active', true),
+    supabase.from('users').select('id, name, function').eq('status', 'active').order('name'),
+    supabase.from('scoring_rules').select('id, name, points, campaign_id, applies_to, data_origin').eq('is_active', true).neq('data_origin', 'salesforce'),
     supabase.from('campaign_participants').select('campaign_id'),
   ])
 
@@ -48,8 +48,8 @@ export default async function PointsPage() {
           </p>
           <PointForm
             campaigns={campaigns ?? []}
-            participants={users ?? []}
-            rules={rules ?? []}
+            participants={(users ?? []) as { id: string; name: string; function: string }[]}
+            rules={(rules ?? []) as { id: string; name: string; points: number; campaign_id: string; applies_to: string }[]}
           />
         </div>
       </div>

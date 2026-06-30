@@ -11,22 +11,26 @@ import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 
 interface Props {
-  participants: { id: string; name: string }[]
+  participants: { id: string; name: string; function: string }[]
   campaigns: { id: string; name: string }[]
-  rules: { id: string; name: string; points: number; campaign_id: string }[]
+  rules: { id: string; name: string; points: number; campaign_id: string; applies_to: string }[]
 }
 
 export function PointForm({ participants, campaigns, rules }: Props) {
   const router = useRouter()
   const [selectedCampaignName, setSelectedCampaignName] = useState('')
   const [selectedParticipantName, setSelectedParticipantName] = useState('')
+  const [selectedParticipantFunction, setSelectedParticipantFunction] = useState('')
   const [selectedRuleName, setSelectedRuleName] = useState('')
 
   const { register, handleSubmit, watch, setValue, reset, formState: { errors, isSubmitting } } =
     useForm<PointInput>({ resolver: zodResolver(pointSchema) as unknown as Resolver<PointInput>, defaultValues: { event_date: new Date().toISOString().slice(0, 10), origin: 'manual' } })
 
   const selectedCampaignId = watch('campaign_id')
-  const filteredRules = rules.filter(r => r.campaign_id === selectedCampaignId)
+  const filteredRules = rules.filter(r =>
+    r.campaign_id === selectedCampaignId &&
+    (!selectedParticipantFunction || r.applies_to === 'all' || r.applies_to === selectedParticipantFunction)
+  )
 
   async function onSubmit(values: PointInput) {
     const res = await fetch('/api/points/create', {
@@ -69,8 +73,12 @@ export function PointForm({ participants, campaigns, rules }: Props) {
       <div>
         <label style={labelStyle}>Participante</label>
         <Select onValueChange={v => {
+          const p = participants.find(p => p.id === v)
           setValue('user_id', v as string)
-          setSelectedParticipantName(participants.find(p => p.id === v)?.name ?? '')
+          setSelectedParticipantName(p?.name ?? '')
+          setSelectedParticipantFunction(p?.function ?? '')
+          setValue('scoring_rule_id', null)
+          setSelectedRuleName('')
         }}>
           <SelectTrigger style={triggerStyle}>
             <span style={{ color: selectedParticipantName ? '#3F3E3E' : 'rgba(63,62,62,0.4)' }}>
@@ -93,9 +101,9 @@ export function PointForm({ participants, campaigns, rules }: Props) {
             setSelectedRuleName(`${rule.name} (${rule.points > 0 ? '+' : ''}${rule.points} pts)`)
           }
         }}>
-          <SelectTrigger style={triggerStyle} disabled={!selectedCampaignId}>
+          <SelectTrigger style={triggerStyle} disabled={!selectedCampaignId || !watch('user_id')}>
             <span style={{ color: selectedRuleName ? '#3F3E3E' : 'rgba(63,62,62,0.4)' }}>
-              {!selectedCampaignId ? 'Selecione a campanha primeiro' : selectedRuleName || 'Selecione o critério'}
+              {!selectedCampaignId ? 'Selecione a campanha primeiro' : !watch('user_id') ? 'Selecione o participante primeiro' : selectedRuleName || 'Selecione o critério'}
             </span>
           </SelectTrigger>
           <SelectContent>
