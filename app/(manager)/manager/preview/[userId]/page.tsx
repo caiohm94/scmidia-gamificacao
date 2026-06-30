@@ -197,44 +197,42 @@ export default async function PreviewPage({
         {/* ---- PAINEL ---- */}
         {tab === 'painel' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            {/* Hero — full photo, no crop (mirrors participant dashboard) */}
+            {/* Hero — foto + info + stats no mesmo card */}
             <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '0 1.25rem 1.25rem 1.25rem', overflow: 'hidden', display: 'flex', alignItems: 'stretch' }}>
               <div style={{ width: 220, flexShrink: 0 }}>
                 {user.avatar_url ? (
                   <img src={user.avatar_url} alt={user.name} style={{ width: '100%', height: 'auto', display: 'block' }} />
                 ) : (
-                  <div style={{ width: '100%', minHeight: 180, background: 'rgba(141,178,60,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem', color: '#8DB23C', fontWeight: 800, fontFamily: 'var(--font-outfit)' }}>
+                  <div style={{ width: '100%', minHeight: 220, background: 'rgba(141,178,60,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem', color: '#8DB23C', fontWeight: 800, fontFamily: 'var(--font-outfit)' }}>
                     {user.name.charAt(0).toUpperCase()}
                   </div>
                 )}
               </div>
-              <div style={{ flex: 1, padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div style={{ flex: 1, padding: '1.25rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div>
-                  <h1 style={{ fontSize: '1.7rem', fontWeight: 800, fontFamily: 'var(--font-outfit)', margin: 0, lineHeight: 1.1 }}>
+                  <h1 style={{ fontSize: '1.55rem', fontWeight: 800, fontFamily: 'var(--font-outfit)', margin: 0, lineHeight: 1.1 }}>
                     Olá, {user.name.split(' ')[0]}! 👋
                   </h1>
-                  {campaign && <p style={{ fontSize: '0.8rem', color: muted, marginTop: '0.35rem' }}>{campaign.name}</p>}
+                  {campaign && <p style={{ fontSize: '0.75rem', color: muted, marginTop: '0.3rem' }}>{campaign.name}</p>}
+                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginTop: '0.6rem' }}>
+                    {currentLevel && <LevelBadge name={currentLevel.name} icon={currentLevel.badge_icon} color={currentLevel.color} />}
+                    <StreakBadge streak={myStreak} />
+                  </div>
                 </div>
-                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.75rem' }}>
-                  {currentLevel && <LevelBadge name={currentLevel.name} icon={currentLevel.badge_icon} color={currentLevel.color} />}
-                  <StreakBadge streak={myStreak} />
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.4rem', marginTop: 'auto' }}>
+                  <div style={{ background: 'rgba(255,223,0,0.08)', border: '1px solid rgba(255,223,0,0.2)', borderRadius: '0 0.75rem 0.75rem 0.75rem', padding: '0.75rem 0.5rem', textAlign: 'center' }}>
+                    <AnimatedCounter value={totalPoints} style={{ fontSize: '1.9rem', fontWeight: 800, color: '#FFDF00', fontFamily: 'var(--font-outfit)', lineHeight: 1.1, display: 'block' }} />
+                    <p style={{ fontSize: '0.62rem', color: muted, marginTop: '0.2rem' }}>pontos ⚽</p>
+                  </div>
+                  <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '0 0.75rem 0.75rem 0.75rem', padding: '0.75rem 0.5rem', textAlign: 'center' }}>
+                    <div style={{ fontSize: '1.9rem', fontWeight: 800, fontFamily: 'var(--font-outfit)', lineHeight: 1.1 }}>{myPosition ? `#${myPosition}` : '—'}</div>
+                    <p style={{ fontSize: '0.62rem', color: muted, marginTop: '0.2rem' }}>ranking 🏆</p>
+                  </div>
+                  <div style={{ background: 'rgba(249,115,22,0.06)', border: '1px solid rgba(249,115,22,0.2)', borderRadius: '0 0.75rem 0.75rem 0.75rem', padding: '0.75rem 0.5rem', textAlign: 'center' }}>
+                    <div style={{ fontSize: '1.9rem', fontWeight: 800, color: '#f97316', fontFamily: 'var(--font-outfit)', lineHeight: 1.1 }}>{myStreak}</div>
+                    <p style={{ fontSize: '0.62rem', color: muted, marginTop: '0.2rem' }}>sequência 🔥</p>
+                  </div>
                 </div>
-              </div>
-            </div>
-
-            {/* Stats */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.75rem' }}>
-              <div style={{ background: 'rgba(255,223,0,0.06)', border: '1px solid rgba(255,223,0,0.2)', borderRadius: '0 1rem 1rem 1rem', padding: '1.25rem 1rem', textAlign: 'center' }}>
-                <AnimatedCounter value={totalPoints} style={{ fontSize: '2.4rem', fontWeight: 800, color: '#FFDF00', fontFamily: 'var(--font-outfit)', lineHeight: 1.1, display: 'block' }} />
-                <p style={{ fontSize: '0.72rem', color: muted, marginTop: '0.3rem' }}>pontos totais ⚽</p>
-              </div>
-              <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '0 1rem 1rem 1rem', padding: '1.25rem 1rem', textAlign: 'center' }}>
-                <div style={{ fontSize: '2.4rem', fontWeight: 800, fontFamily: 'var(--font-outfit)', lineHeight: 1.1 }}>{myPosition ? `#${myPosition}` : '—'}</div>
-                <p style={{ fontSize: '0.72rem', color: muted, marginTop: '0.3rem' }}>posição no ranking 🏆</p>
-              </div>
-              <div style={{ background: 'rgba(249,115,22,0.06)', border: '1px solid rgba(249,115,22,0.2)', borderRadius: '0 1rem 1rem 1rem', padding: '1.25rem 1rem', textAlign: 'center' }}>
-                <div style={{ fontSize: '2.4rem', fontWeight: 800, color: '#f97316', fontFamily: 'var(--font-outfit)', lineHeight: 1.1 }}>{myStreak}</div>
-                <p style={{ fontSize: '0.72rem', color: muted, marginTop: '0.3rem' }}>dias seguidos 🔥</p>
               </div>
             </div>
 
@@ -278,7 +276,7 @@ export default async function PreviewPage({
                             </p>
                             {pt.description && (
                               <p style={{ fontSize: '0.68rem', color: muted, margin: 0, marginTop: '0.1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {pt.description.replace(/^SF Import — [^(]+/, '').replace(/^\s*—\s*/, '').replace(/\(|\)/g, '').trim() || pt.description}
+                                {pt.description.replace(/^SF Import — [^(]+/, '').replace(/^\s*—\s*/, '').replace(/[()]/g, '').trim() || pt.description}
                               </p>
                             )}
                           </div>

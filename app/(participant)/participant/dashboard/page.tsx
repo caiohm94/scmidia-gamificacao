@@ -1,12 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { requireRole, getSessionUser } from '@/lib/auth/helpers'
 import { getRanking } from '@/lib/rankings/queries'
-import { Avatar } from '@/components/shared/Avatar'
 import { LevelBadge } from '@/components/game/LevelBadge'
 import { StreakBadge } from '@/components/game/StreakBadge'
 import { AnimatedCounter } from '@/components/participant/AnimatedCounter'
 import { GoalProgressBar } from '@/components/participant/GoalProgressBar'
-import { format } from 'date-fns'
+import { PointsHistory } from '@/components/participant/PointsHistory'
 import type { Tables } from '@/types/database'
 
 type PointWithRule = Tables<'point_transactions'> & {
@@ -120,7 +119,7 @@ export default async function ParticipantDashboard() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
-      {/* Hero */}
+      {/* Hero — photo + info + stats no mesmo card */}
       <div style={{
         background: cardBg, border: `1px solid ${cardBorder}`,
         borderRadius: '0 1.25rem 1.25rem 1.25rem', overflow: 'hidden',
@@ -135,59 +134,59 @@ export default async function ParticipantDashboard() {
               style={{ width: '100%', height: 'auto', display: 'block' }}
             />
           ) : (
-            <div style={{ width: '100%', minHeight: 180, background: 'rgba(141,178,60,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem', color: '#8DB23C', fontWeight: 800, fontFamily: 'var(--font-outfit)' }}>
+            <div style={{ width: '100%', minHeight: 220, background: 'rgba(141,178,60,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem', color: '#8DB23C', fontWeight: 800, fontFamily: 'var(--font-outfit)' }}>
               {user.name.charAt(0).toUpperCase()}
             </div>
           )}
         </div>
-        {/* Info column */}
-        <div style={{ flex: 1, padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+        {/* Info + stats column */}
+        <div style={{ flex: 1, padding: '1.25rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div>
-            <h1 style={{ fontSize: '1.7rem', fontWeight: 800, fontFamily: 'var(--font-outfit)', margin: 0, lineHeight: 1.1 }}>
+            <h1 style={{ fontSize: '1.55rem', fontWeight: 800, fontFamily: 'var(--font-outfit)', margin: 0, lineHeight: 1.1 }}>
               Olá, {user.name.split(' ')[0]}! 👋
             </h1>
             {campaign && (
-              <p style={{ fontSize: '0.8rem', color: muted, marginTop: '0.35rem' }}>{campaign.name}</p>
+              <p style={{ fontSize: '0.75rem', color: muted, marginTop: '0.3rem' }}>{campaign.name}</p>
             )}
+            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginTop: '0.6rem' }}>
+              {currentLevel && (
+                <LevelBadge name={currentLevel.name} icon={currentLevel.badge_icon} color={currentLevel.color} />
+              )}
+              <StreakBadge streak={myStreak} />
+            </div>
           </div>
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.75rem' }}>
-            {currentLevel && (
-              <LevelBadge name={currentLevel.name} icon={currentLevel.badge_icon} color={currentLevel.color} />
-            )}
-            <StreakBadge streak={myStreak} />
-          </div>
-        </div>
-      </div>
 
-      {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.75rem' }}>
-        <div style={{
-          background: 'rgba(255,223,0,0.06)', border: '1px solid rgba(255,223,0,0.2)',
-          borderRadius: '0 1rem 1rem 1rem', padding: '1.25rem 1rem', textAlign: 'center',
-        }}>
-          <AnimatedCounter
-            value={totalPoints}
-            style={{ fontSize: '2.4rem', fontWeight: 800, color: '#FFDF00', fontFamily: 'var(--font-outfit)', lineHeight: 1.1, display: 'block' }}
-          />
-          <p style={{ fontSize: '0.72rem', color: muted, marginTop: '0.3rem' }}>pontos totais ⚽</p>
-        </div>
-        <div style={{
-          background: cardBg, border: `1px solid ${cardBorder}`,
-          borderRadius: '0 1rem 1rem 1rem', padding: '1.25rem 1rem', textAlign: 'center',
-        }}>
-          <div style={{ fontSize: '2.4rem', fontWeight: 800, fontFamily: 'var(--font-outfit)', lineHeight: 1.1 }}>
-            {myPosition ? `#${myPosition}` : '—'}
+          {/* Stats grid — dentro do hero, sem espaço perdido */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.4rem', marginTop: 'auto' }}>
+            <div style={{
+              background: 'rgba(255,223,0,0.08)', border: '1px solid rgba(255,223,0,0.2)',
+              borderRadius: '0 0.75rem 0.75rem 0.75rem', padding: '0.75rem 0.5rem', textAlign: 'center',
+            }}>
+              <AnimatedCounter
+                value={totalPoints}
+                style={{ fontSize: '1.9rem', fontWeight: 800, color: '#FFDF00', fontFamily: 'var(--font-outfit)', lineHeight: 1.1, display: 'block' }}
+              />
+              <p style={{ fontSize: '0.62rem', color: muted, marginTop: '0.2rem' }}>pontos ⚽</p>
+            </div>
+            <div style={{
+              background: cardBg, border: `1px solid ${cardBorder}`,
+              borderRadius: '0 0.75rem 0.75rem 0.75rem', padding: '0.75rem 0.5rem', textAlign: 'center',
+            }}>
+              <div style={{ fontSize: '1.9rem', fontWeight: 800, fontFamily: 'var(--font-outfit)', lineHeight: 1.1 }}>
+                {myPosition ? `#${myPosition}` : '—'}
+              </div>
+              <p style={{ fontSize: '0.62rem', color: muted, marginTop: '0.2rem' }}>ranking 🏆</p>
+            </div>
+            <div style={{
+              background: 'rgba(249,115,22,0.06)', border: '1px solid rgba(249,115,22,0.2)',
+              borderRadius: '0 0.75rem 0.75rem 0.75rem', padding: '0.75rem 0.5rem', textAlign: 'center',
+            }}>
+              <div style={{ fontSize: '1.9rem', fontWeight: 800, color: '#f97316', fontFamily: 'var(--font-outfit)', lineHeight: 1.1 }}>
+                {myStreak}
+              </div>
+              <p style={{ fontSize: '0.62rem', color: muted, marginTop: '0.2rem' }}>sequência 🔥</p>
+            </div>
           </div>
-          <p style={{ fontSize: '0.72rem', color: muted, marginTop: '0.3rem' }}>posição no ranking 🏆</p>
-        </div>
-        <div style={{
-          background: 'rgba(249,115,22,0.06)', border: '1px solid rgba(249,115,22,0.2)',
-          borderRadius: '0 1rem 1rem 1rem', padding: '1.25rem 1rem', textAlign: 'center',
-        }}>
-          <div style={{ fontSize: '2.4rem', fontWeight: 800, color: '#f97316', fontFamily: 'var(--font-outfit)', lineHeight: 1.1 }}>
-            {myStreak}
-          </div>
-          <p style={{ fontSize: '0.72rem', color: muted, marginTop: '0.3rem' }}>dias seguidos 🔥</p>
         </div>
       </div>
 
@@ -220,35 +219,13 @@ export default async function ParticipantDashboard() {
           <div style={{ padding: '0.75rem 1.25rem', borderBottom: '1px solid var(--p-sub-border, rgba(0,0,0,0.07))' }}>
             <p style={{ fontWeight: 600, fontSize: '0.82rem', fontFamily: 'var(--font-outfit)', margin: 0 }}>Últimos pontos</p>
           </div>
-          <div>
-            {myPoints.length === 0
-              ? <p style={{ padding: '1.5rem', textAlign: 'center', color: muted, fontSize: '0.82rem' }}>Nenhum ponto ainda.</p>
-              : myPoints.slice(0, 8).map(pt => (
-                  <div key={pt.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.6rem 1.25rem', borderBottom: '1px solid var(--p-separator, rgba(0,0,0,0.05))' }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: '0.82rem', color: 'var(--p-text-dim, #2a3d2b)', margin: 0, fontWeight: 500 }}>
-                        {pt.scoring_rules?.name ?? 'Bônus'}
-                      </p>
-                      {pt.description && (
-                        <p style={{ fontSize: '0.68rem', color: muted, margin: 0, marginTop: '0.1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {pt.description.replace(/^SF Import — [^(]+/, '').replace(/^\s*—\s*/, '').replace(/\(|\)/g, '').trim() || pt.description}
-                        </p>
-                      )}
-                    </div>
-                    <span style={{ fontSize: '0.7rem', color: muted, whiteSpace: 'nowrap' }}>
-                      {format(new Date(pt.event_date), 'dd/MM')}
-                    </span>
-                    <span style={{
-                      fontSize: '0.8rem', fontWeight: 700, padding: '0.1rem 0.5rem',
-                      borderRadius: '0 0.25rem 0.25rem 0.25rem', whiteSpace: 'nowrap',
-                      background: pt.points > 0 ? 'rgba(141,178,60,0.18)' : 'rgba(220,53,69,0.15)',
-                      color: pt.points > 0 ? '#8DB23C' : '#f87171',
-                    }}>
-                      {pt.points > 0 ? '+' : ''}{pt.points}
-                    </span>
-                  </div>
-                ))}
-          </div>
+          <PointsHistory points={myPoints.slice(0, 8).map(pt => ({
+            id: pt.id,
+            points: pt.points,
+            event_date: pt.event_date,
+            description: pt.description ?? null,
+            scoring_rules: pt.scoring_rules,
+          }))} />
         </div>
 
         {earnedBonuses.length > 0 && (
