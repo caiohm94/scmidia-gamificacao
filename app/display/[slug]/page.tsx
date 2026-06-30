@@ -366,21 +366,17 @@ function DisplayPanel() {
   const supabase = createClient()
   const campaignRef = useRef<CampaignRow | null>(null)
   const audioCtxRef = useRef<AudioContext | null>(null)
-  const [audioReady, setAudioReady] = useState(false)
 
-  // Browsers require a user gesture to unlock AudioContext.
-  // On first click anywhere on the display, we resume/create it.
   useEffect(() => {
     function unlock() {
       if (audioCtxRef.current) {
         if (audioCtxRef.current.state === 'suspended') audioCtxRef.current.resume()
-        setAudioReady(true)
         return
       }
       try {
         const ACtx = window.AudioContext ?? ((window as unknown) as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
         audioCtxRef.current = new ACtx()
-        audioCtxRef.current.resume().then(() => setAudioReady(true)).catch(() => {})
+        audioCtxRef.current.resume().catch(() => {})
       } catch { /* noop */ }
     }
     document.addEventListener('click', unlock, { once: false })
@@ -555,13 +551,6 @@ function DisplayPanel() {
           <p style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.18)', fontFamily: 'Outfit, sans-serif' }}>
             scmidia.com.br — Missão Hexa
           </p>
-          <span style={{
-            fontSize: '0.62rem', fontFamily: 'Outfit, sans-serif',
-            color: audioReady ? '#8DB23C' : 'rgba(255,255,255,0.18)',
-            display: 'flex', alignItems: 'center', gap: '0.25rem',
-          }}>
-            {audioReady ? '🔊 som ativo' : '🔇 clique para som'}
-          </span>
         </div>
       </footer>
     </div>
