@@ -352,6 +352,27 @@ function DisplayPanel() {
 
   const supabase = createClient()
   const campaignRef = useRef<CampaignRow | null>(null)
+  const audioCtxRef = useRef<AudioContext | null>(null)
+  const [audioReady, setAudioReady] = useState(false)
+
+  // Browsers require a user gesture to unlock AudioContext.
+  // On first click anywhere on the display, we resume/create it.
+  useEffect(() => {
+    function unlock() {
+      if (audioCtxRef.current) {
+        if (audioCtxRef.current.state === 'suspended') audioCtxRef.current.resume()
+        setAudioReady(true)
+        return
+      }
+      try {
+        const ACtx = window.AudioContext ?? ((window as unknown) as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+        audioCtxRef.current = new ACtx()
+        audioCtxRef.current.resume().then(() => setAudioReady(true)).catch(() => {})
+      } catch { /* noop */ }
+    }
+    document.addEventListener('click', unlock, { once: false })
+    return () => document.removeEventListener('click', unlock)
+  }, [])
 
   const nextView = useCallback(() => {
     setView(v => VIEWS[(VIEWS.indexOf(v) + 1) % VIEWS.length])
@@ -435,7 +456,7 @@ function DisplayPanel() {
       display: 'flex', flexDirection: 'column', fontFamily: 'Outfit, system-ui, sans-serif',
     }}>
       <style>{CSS}</style>
-      <CelebrationOverlay event={celebration} onDone={() => setCelebration(null)} />
+      <CelebrationOverlay event={celebration} onDone={() => setCelebration(null)} audioCtxRef={audioCtxRef} />
 
       {/* Animated top accent */}
       <div style={{ height: 3, background: 'linear-gradient(90deg, #5C7435, #8DB23C, #BACB3A, #FFDF00, #BACB3A, #8DB23C, #5C7435)', backgroundSize: '200% 100%', animation: 'shimmer 4s linear infinite' }} />
@@ -504,9 +525,18 @@ function DisplayPanel() {
               }} />
           ))}
         </div>
-        <p style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.18)', fontFamily: 'Outfit, sans-serif' }}>
-          scmidia.com.br — Missão Hexa
-        </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <p style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.18)', fontFamily: 'Outfit, sans-serif' }}>
+            scmidia.com.br — Missão Hexa
+          </p>
+          <span style={{
+            fontSize: '0.62rem', fontFamily: 'Outfit, sans-serif',
+            color: audioReady ? '#8DB23C' : 'rgba(255,255,255,0.18)',
+            display: 'flex', alignItems: 'center', gap: '0.25rem',
+          }}>
+            {audioReady ? '🔊 som ativo' : '🔇 clique para som'}
+          </span>
+        </div>
       </footer>
     </div>
   )
