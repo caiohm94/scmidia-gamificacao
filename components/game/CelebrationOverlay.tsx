@@ -56,55 +56,52 @@ function playVuvuzela(ctx: AudioContext) {
   })
 }
 
-// Apito de árbitro de futebol: dois apitos longos agudos com harmônicos
+// Apito de árbitro: dois apitos longos como "twiiit — twiiiiit"
 function playWhistle(ctx: AudioContext) {
   const t = ctx.currentTime
-  // Two long referee-style blasts: twiiiit — twiiiiit
   const blasts = [
-    { start: 0,    dur: 0.55 },
-    { start: 0.75, dur: 0.75 },
+    { start: 0,    dur: 0.50 },
+    { start: 0.70, dur: 0.70 },
   ]
   blasts.forEach(({ start, dur }) => {
     const master = ctx.createGain()
     master.gain.setValueAtTime(0, t + start)
-    master.gain.linearRampToValueAtTime(0.9, t + start + 0.015)
-    master.gain.setValueAtTime(0.9, t + start + dur - 0.05)
+    master.gain.linearRampToValueAtTime(0.9, t + start + 0.012)
+    master.gain.setValueAtTime(0.9, t + start + dur - 0.06)
     master.gain.linearRampToValueAtTime(0, t + start + dur)
     master.connect(ctx.destination)
 
-    // Distortion/crunch for metallic whistle quality
-    const wave = ctx.createWaveShaper()
-    const curve = new Float32Array(256)
-    for (let i = 0; i < 256; i++) {
-      const x = (i * 2) / 256 - 1
-      curve[i] = (Math.PI + 80) * x / (Math.PI + 80 * Math.abs(x))
-    }
-    wave.curve = curve
-    wave.connect(master)
-
-    // Fundamental + harmonics for metallic piercing whistle
-    const harmonics = [
-      { freq: 2637, vol: 0.55 }, // E7 ≈ whistle fundamental
+    // Fundamental + 2nd harmonic for a bright metallic tone
+    const voices = [
+      { freq: 2637, vol: 0.6 },
       { freq: 2637 * 2, vol: 0.25 },
-      { freq: 2637 * 3, vol: 0.12 },
-      { freq: 2637 * 0.5, vol: 0.08 },
+      { freq: 2637 * 3, vol: 0.10 },
     ]
-    harmonics.forEach(({ freq, vol }) => {
+    voices.forEach(({ freq, vol }) => {
       const osc = ctx.createOscillator()
-      osc.type = 'square'
-      osc.frequency.setValueAtTime(freq, t + start)
-      // Slight pitch rise at start (like a real blown whistle)
-      osc.frequency.linearRampToValueAtTime(freq * 1.015, t + start + 0.04)
-      osc.frequency.setValueAtTime(freq * 1.015, t + start + dur - 0.08)
-      osc.frequency.linearRampToValueAtTime(freq * 0.99, t + start + dur)
+      osc.type = 'sine'
+      // Slight pitch sweep up at attack, down at release (like blowing)
+      osc.frequency.setValueAtTime(freq * 0.98, t + start)
+      osc.frequency.linearRampToValueAtTime(freq * 1.01, t + start + 0.04)
+      osc.frequency.setValueAtTime(freq * 1.01, t + start + dur - 0.07)
+      osc.frequency.linearRampToValueAtTime(freq * 0.97, t + start + dur)
       const g = ctx.createGain()
       g.gain.value = vol
       osc.connect(g)
-      g.connect(wave)
+      g.connect(master)
       osc.start(t + start)
       osc.stop(t + start + dur + 0.01)
     })
   })
+}
+
+function getOrCreateCtx(ref: React.RefObject<AudioContext | null>): AudioContext | null {
+  if (ref.current && ref.current.state !== 'closed') return ref.current
+  try {
+    const ACtx = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+    ref.current = new ACtx()
+    return ref.current
+  } catch { return null }
 }
 
 export function CelebrationOverlay({ event, onDone, audioCtxRef }: Props) {
@@ -126,11 +123,20 @@ export function CelebrationOverlay({ event, onDone, audioCtxRef }: Props) {
 
   useEffect(() => {
     if (!event) { playedRef.current = false; return }
-    if (!playedRef.current && audioCtxRef.current) {
+
+    if (!playedRef.current) {
       playedRef.current = true
-      if (event.points < 0) playWhistle(audioCtxRef.current)
-      else playVuvuzela(audioCtxRef.current)
+      const ctx = getOrCreateCtx(audioCtxRef)
+      if (ctx) {
+        const play = () => {
+          if (event.points < 0) playWhistle(ctx)
+          else playVuvuzela(ctx)
+        }
+        if (ctx.state === 'suspended') ctx.resume().then(play).catch(() => {})
+        else play()
+      }
     }
+
     const t = setTimeout(onDone, DURATION_MS)
     return () => clearTimeout(t)
   }, [event, onDone, audioCtxRef])
