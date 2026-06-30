@@ -419,6 +419,7 @@ export default async function PreviewPage({
                             decimal_places: rule.decimal_places,
                           }}
                           is_cumulative={isCumulative}
+                          forceDark
                         />
                       )}
                     </div>

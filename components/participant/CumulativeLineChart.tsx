@@ -8,10 +8,12 @@ interface Props {
   data: CumDataPoint[]
   selectedDay: number | null
   formatY: (v: number) => string
+  forceDark?: boolean
 }
 
-export function CumulativeLineChart({ data, selectedDay, formatY }: Props) {
-  const dark = useIsDark()
+export function CumulativeLineChart({ data, selectedDay, formatY, forceDark }: Props) {
+  const isDarkHook = useIsDark()
+  const dark = forceDark ?? isDarkHook
 
   // SC Mídia brand palette — dark: muted whites; light: Onyx/Fern/Apple Green
   const legendText  = dark ? 'rgba(255,255,255,0.4)'  : 'rgba(63,62,62,0.6)'

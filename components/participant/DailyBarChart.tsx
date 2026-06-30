@@ -13,10 +13,12 @@ interface Props {
   data: DailyBarPoint[]
   selectedDay: number | null
   formatV: (v: number) => string
+  forceDark?: boolean
 }
 
-export function DailyBarChart({ data, selectedDay, formatV }: Props) {
-  const dark = useIsDark()
+export function DailyBarChart({ data, selectedDay, formatV, forceDark }: Props) {
+  const isDarkHook = useIsDark()
+  const dark = forceDark ?? isDarkHook
 
   const validPcts = data.flatMap(d => d.pct != null ? [d.pct] : [])
   const maxPct = validPcts.length ? Math.max(...validPcts) : 120

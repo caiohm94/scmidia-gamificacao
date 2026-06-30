@@ -27,6 +27,7 @@ interface Props {
   today: string
   rule: Rule
   is_cumulative?: boolean
+  forceDark?: boolean
 }
 
 function perfColor(pct: number): { bg: string; color: string; border: string } {
@@ -35,7 +36,7 @@ function perfColor(pct: number): { bg: string; color: string; border: string } {
   return               { bg: 'rgba(239,68,68,0.15)',   color: '#ef4444',  border: 'rgba(239,68,68,0.25)' }
 }
 
-export function MetasCalendar({ days, goals, year, month, today, rule, is_cumulative }: Props) {
+export function MetasCalendar({ days, goals, year, month, today, rule, is_cumulative, forceDark }: Props) {
   const [selectedDay, setSelectedDay] = useState<number | null>(null)
 
   const muted = 'var(--p-muted)'
@@ -233,6 +234,7 @@ export function MetasCalendar({ days, goals, year, month, today, rule, is_cumula
                       data={cumChartData}
                       selectedDay={selectedDay}
                       formatY={v => formatValueCompact(v, vt, dp)}
+                      forceDark={forceDark}
                     />
                   )}
                 </>
@@ -256,6 +258,7 @@ export function MetasCalendar({ days, goals, year, month, today, rule, is_cumula
                   data={dailyBarData}
                   selectedDay={selectedDay}
                   formatV={v => formatValueCompact(v, vt, dp)}
+                  forceDark={forceDark}
                 />
               )}
             </>
