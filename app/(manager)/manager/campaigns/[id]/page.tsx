@@ -209,7 +209,7 @@ export default async function CampaignDetailPage({ params }: Props) {
               ))}
             </div>
           )}
-          <ParticipantForm campaignId={id} />
+          <ParticipantForm campaignId={id} existingIds={participants.map(p => p.user_id)} />
         </div>
       </div>
     </div>
