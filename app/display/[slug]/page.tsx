@@ -77,13 +77,17 @@ function TVAvatar({ src, name, size = 56, glowing = false }: { src?: string | nu
   const initial = name?.charAt(0)?.toUpperCase() ?? '?'
   const border = glowing ? '3px solid #FFDF00' : '2px solid rgba(141,178,60,0.35)'
   const shadow = glowing ? '0 0 20px 4px rgba(255,223,0,0.3)' : 'none'
-  const style = { width: size, height: size, borderRadius: '0 0.75rem 0.75rem 0.75rem', flexShrink: 0, border, boxShadow: shadow, objectFit: 'cover' as const, transition: 'box-shadow 0.4s' }
+  const base = { width: size, height: size, borderRadius: '0 0.75rem 0.75rem 0.75rem', flexShrink: 0, border, boxShadow: shadow, transition: 'box-shadow 0.4s', overflow: 'hidden' as const, display: 'flex' as const, alignItems: 'center' as const, justifyContent: 'center' as const }
 
-  if (src && !err) return <img src={src} alt={name} onError={() => setErr(true)} style={style} />
+  if (src && !err) return (
+    <div style={base}>
+      <img src={src} alt={name} onError={() => setErr(true)}
+        style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }} />
+    </div>
+  )
   return (
     <div style={{
-      ...style, display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: 'linear-gradient(135deg, #8DB23C, #5C7435)',
+      ...base, background: 'linear-gradient(135deg, #8DB23C, #5C7435)',
       fontSize: size * 0.38, fontWeight: 800, color: '#fff', fontFamily: 'Outfit, sans-serif',
     }}>{initial}</div>
   )
@@ -127,20 +131,22 @@ function RankingView({ rows, viewKey }: { rows: CampaignRanking[]; viewKey: numb
         const delay = `${i * 60}ms`
         const posColors = ['#FFDF00', '#C0C0C0', '#CD7F32']
         const ptColor = isTop3 ? posColors[row.position - 1] : '#8DB23C'
+        const avatarSize = isFirst ? 86 : isTop3 ? 72 : 44
+        const rowPad = isTop3 ? '0.7rem 1rem' : '0.45rem 0.9rem'
 
         return (
           <div
             key={row.user_id}
             className="row-enter"
             style={{
-              display: 'flex', alignItems: 'center', gap: '0.9rem',
-              padding: '0.55rem 0.9rem',
+              display: 'flex', alignItems: 'center', gap: isTop3 ? '1.1rem' : '0.9rem',
+              padding: rowPad,
               background: isFirst
-                ? 'rgba(255,223,0,0.07)'
+                ? 'rgba(255,223,0,0.09)'
                 : isTop3 ? 'rgba(141,178,60,0.07)' : 'rgba(255,255,255,0.025)',
               borderRadius: '0 0.55rem 0.55rem 0.55rem',
               border: isFirst
-                ? '1px solid rgba(255,223,0,0.2)'
+                ? '1px solid rgba(255,223,0,0.25)'
                 : isTop3 ? '1px solid rgba(141,178,60,0.15)' : '1px solid rgba(255,255,255,0.04)',
               animationDelay: delay,
               animation: `fadeSlideIn 0.45s ease ${delay} both`,
@@ -148,25 +154,25 @@ function RankingView({ rows, viewKey }: { rows: CampaignRanking[]; viewKey: numb
             }}
           >
             {/* Position */}
-            <div style={{ width: 34, textAlign: 'center', flexShrink: 0 }}>
+            <div style={{ width: isTop3 ? 40 : 34, textAlign: 'center', flexShrink: 0 }}>
               {row.position <= 3
-                ? <span style={{ fontSize: '1.3rem' }}>{['🥇','🥈','🥉'][row.position-1]}</span>
+                ? <span style={{ fontSize: isFirst ? '1.7rem' : '1.4rem' }}>{['🥇','🥈','🥉'][row.position-1]}</span>
                 : <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'rgba(255,255,255,0.35)', fontFamily: 'Outfit, sans-serif' }}>{row.position}</span>
               }
             </div>
 
-            <TVAvatar src={row.avatar_url} name={row.name} size={isTop3 ? 46 : 40} glowing={isFirst} />
+            <TVAvatar src={row.avatar_url} name={row.name} size={avatarSize} glowing={isFirst} />
 
             {/* Name + team */}
             <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{
-                fontFamily: 'Outfit, sans-serif', fontWeight: isTop3 ? 700 : 600,
-                fontSize: isTop3 ? '1rem' : '0.9rem', color: '#fff',
+                fontFamily: 'Outfit, sans-serif', fontWeight: isTop3 ? 800 : 600,
+                fontSize: isFirst ? '1.25rem' : isTop3 ? '1.05rem' : '0.88rem', color: '#fff',
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
               }}>{row.name}</p>
               {row.team_name && (
                 <span style={{
-                  fontSize: '0.65rem', padding: '0.05rem 0.45rem', borderRadius: '0 0.2rem 0.2rem 0.2rem',
+                  fontSize: isTop3 ? '0.7rem' : '0.62rem', padding: '0.05rem 0.45rem', borderRadius: '0 0.2rem 0.2rem 0.2rem',
                   background: (row.team_color ?? '#8DB23C') + '25', color: row.team_color ?? '#8DB23C',
                   fontWeight: 600, fontFamily: 'Outfit, sans-serif',
                 }}>{row.team_name}</span>
@@ -177,13 +183,13 @@ function RankingView({ rows, viewKey }: { rows: CampaignRanking[]; viewKey: numb
             <div style={{ textAlign: 'right', flexShrink: 0 }}>
               <p style={{
                 fontFamily: 'Outfit, sans-serif', fontWeight: 900,
-                fontSize: isTop3 ? '1.4rem' : '1.1rem', color: ptColor, lineHeight: 1,
+                fontSize: isFirst ? '1.9rem' : isTop3 ? '1.5rem' : '1.1rem', color: ptColor, lineHeight: 1,
               }}>{row.total_points.toLocaleString('pt-BR')}</p>
               <p style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.25)' }}>pts</p>
             </div>
 
             {row.current_streak > 0 && (
-              <div style={{ fontSize: '0.75rem', color: '#FF8C00', flexShrink: 0 }}>🔥{row.current_streak}</div>
+              <div style={{ fontSize: isTop3 ? '0.85rem' : '0.75rem', color: '#FF8C00', flexShrink: 0 }}>🔥{row.current_streak}</div>
             )}
           </div>
         )
@@ -195,8 +201,8 @@ function RankingView({ rows, viewKey }: { rows: CampaignRanking[]; viewKey: numb
 // --- Podium ---
 function PodiumView({ top3, viewKey }: { top3: CampaignRanking[]; viewKey: number }) {
   const order = [top3[1], top3[0], top3[2]]
-  const heights = [240, 310, 200]
-  const photoSizes = [96, 128, 86]
+  const heights = [200, 260, 170]
+  const photoSizes = [150, 200, 130]
   const medals = ['🥈','🥇','🥉']
   const accentColors = ['#C0C0C0','#FFDF00','#CD7F32']
   const delays = ['0.15s','0s','0.3s']
