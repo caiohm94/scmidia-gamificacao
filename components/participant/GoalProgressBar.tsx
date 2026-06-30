@@ -11,10 +11,19 @@ interface Props {
   periodLabel?: string
 }
 
+function pctColor(pct: number): string {
+  if (pct >= 100) return '#8DB23C'
+  if (pct >= 75)  return '#FFDF00'
+  if (pct > 0)    return '#ef4444'
+  return 'var(--p-track)'
+}
+
 export function GoalProgressBar({ label, actual, target, valueType, decimalPlaces, periodLabel }: Props) {
   const barRef = useRef<HTMLDivElement>(null)
-  const pct = target > 0 ? Math.min(((actual ?? 0) / target) * 100, 100) : 0
-  const achieved = (actual ?? 0) >= target && target > 0
+  const pctRaw = target > 0 ? ((actual ?? 0) / target) * 100 : 0
+  const pct = Math.min(pctRaw, 100)
+  const barColor = pctColor(pctRaw)
+  const textColor = pctRaw >= 100 ? '#8DB23C' : pctRaw >= 75 ? '#FFDF00' : pctRaw > 0 ? '#ef4444' : 'var(--p-muted)'
 
   useEffect(() => {
     const el = barRef.current
@@ -26,8 +35,6 @@ export function GoalProgressBar({ label, actual, target, valueType, decimalPlace
     })
     return () => cancelAnimationFrame(raf)
   }, [pct])
-
-  const barColor = achieved ? '#8DB23C' : pct >= 70 ? '#FFDF00' : 'var(--p-track)'
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
@@ -44,12 +51,9 @@ export function GoalProgressBar({ label, actual, target, valueType, decimalPlace
               {periodLabel}
             </span>
           )}
-          {achieved && <span style={{ fontSize: '0.7rem' }}>✅</span>}
+          {pctRaw >= 100 && <span style={{ fontSize: '0.7rem' }}>✅</span>}
         </div>
-        <span style={{
-          fontSize: '0.78rem', fontWeight: 600, fontFamily: 'var(--font-outfit)',
-          color: achieved ? '#8DB23C' : 'var(--p-muted)',
-        }}>
+        <span style={{ fontSize: '0.78rem', fontWeight: 600, fontFamily: 'var(--font-outfit)', color: textColor }}>
           {formatValueCompact(actual ?? 0, valueType, decimalPlaces)}
           {' / '}
           {formatValueCompact(target, valueType, decimalPlaces)}

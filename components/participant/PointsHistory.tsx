@@ -14,13 +14,14 @@ export function PointsHistory({ points }: { points: PointEntry[] }) {
   const [dark, setDark] = useState(false)
 
   useEffect(() => {
-    const apply = () => setDark(localStorage.getItem('participant_theme') === 'black')
-    apply()
-    window.addEventListener('storage', apply)
-    window.addEventListener('sc-theme', apply)
+    const fromStorage = () => setDark(localStorage.getItem('participant_theme') === 'black')
+    const fromEvent = (e: Event) => setDark((e as CustomEvent<string>).detail === 'black')
+    fromStorage()
+    window.addEventListener('storage', fromStorage)
+    window.addEventListener('sc-theme', fromEvent)
     return () => {
-      window.removeEventListener('storage', apply)
-      window.removeEventListener('sc-theme', apply)
+      window.removeEventListener('storage', fromStorage)
+      window.removeEventListener('sc-theme', fromEvent)
     }
   }, [])
 
