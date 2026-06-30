@@ -56,24 +56,54 @@ function playVuvuzela(ctx: AudioContext) {
   })
 }
 
-// Apito de árbitro: três bips curtos e agudos
+// Apito de árbitro de futebol: dois apitos longos agudos com harmônicos
 function playWhistle(ctx: AudioContext) {
   const t = ctx.currentTime
-  const FREQ = 3200
-  const beeps = [0, 0.22, 0.44]
-  beeps.forEach(delay => {
-    const osc = ctx.createOscillator()
-    osc.type = 'sine'
-    osc.frequency.value = FREQ
-    const g = ctx.createGain()
-    g.gain.setValueAtTime(0, t + delay)
-    g.gain.linearRampToValueAtTime(0.7, t + delay + 0.01)
-    g.gain.setValueAtTime(0.7, t + delay + 0.16)
-    g.gain.linearRampToValueAtTime(0, t + delay + 0.19)
-    osc.connect(g)
-    g.connect(ctx.destination)
-    osc.start(t + delay)
-    osc.stop(t + delay + 0.2)
+  // Two long referee-style blasts: twiiiit — twiiiiit
+  const blasts = [
+    { start: 0,    dur: 0.55 },
+    { start: 0.75, dur: 0.75 },
+  ]
+  blasts.forEach(({ start, dur }) => {
+    const master = ctx.createGain()
+    master.gain.setValueAtTime(0, t + start)
+    master.gain.linearRampToValueAtTime(0.9, t + start + 0.015)
+    master.gain.setValueAtTime(0.9, t + start + dur - 0.05)
+    master.gain.linearRampToValueAtTime(0, t + start + dur)
+    master.connect(ctx.destination)
+
+    // Distortion/crunch for metallic whistle quality
+    const wave = ctx.createWaveShaper()
+    const curve = new Float32Array(256)
+    for (let i = 0; i < 256; i++) {
+      const x = (i * 2) / 256 - 1
+      curve[i] = (Math.PI + 80) * x / (Math.PI + 80 * Math.abs(x))
+    }
+    wave.curve = curve
+    wave.connect(master)
+
+    // Fundamental + harmonics for metallic piercing whistle
+    const harmonics = [
+      { freq: 2637, vol: 0.55 }, // E7 ≈ whistle fundamental
+      { freq: 2637 * 2, vol: 0.25 },
+      { freq: 2637 * 3, vol: 0.12 },
+      { freq: 2637 * 0.5, vol: 0.08 },
+    ]
+    harmonics.forEach(({ freq, vol }) => {
+      const osc = ctx.createOscillator()
+      osc.type = 'square'
+      osc.frequency.setValueAtTime(freq, t + start)
+      // Slight pitch rise at start (like a real blown whistle)
+      osc.frequency.linearRampToValueAtTime(freq * 1.015, t + start + 0.04)
+      osc.frequency.setValueAtTime(freq * 1.015, t + start + dur - 0.08)
+      osc.frequency.linearRampToValueAtTime(freq * 0.99, t + start + dur)
+      const g = ctx.createGain()
+      g.gain.value = vol
+      osc.connect(g)
+      g.connect(wave)
+      osc.start(t + start)
+      osc.stop(t + start + dur + 0.01)
+    })
   })
 }
 
@@ -173,8 +203,10 @@ export function CelebrationOverlay({ event, onDone, audioCtxRef }: Props) {
       <div style={{ animation: 'photo-in .55s cubic-bezier(.175,.885,.32,1.275) .25s both', marginBottom: '1.2rem' }}>
         {event.avatar_url ? (
           <img src={event.avatar_url} alt={event.user_name ?? ''} style={{
-            width: 'clamp(120px, 14vw, 180px)', height: 'clamp(120px, 14vw, 180px)',
-            borderRadius: '0 2rem 2rem 2rem', objectFit: 'cover', display: 'block',
+            width: 'clamp(160px, 18vw, 280px)',
+            height: 'auto',
+            display: 'block',
+            borderRadius: '0 2rem 2rem 2rem',
             border: `5px solid ${haloBorder}`,
             animation: 'halo 1.6s ease-in-out .5s infinite',
           }} />
