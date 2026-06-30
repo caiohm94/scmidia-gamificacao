@@ -75,7 +75,7 @@ export function ParticipantDrawer({ userId, campaignId, onClose }: Props) {
       }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0.75rem 1rem', borderBottom: '1px solid rgba(63,62,62,0.08)' }}>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(63,62,62,0.45)', padding: '0.25rem', display: 'flex' }}>
+          <button onClick={onClose} aria-label="Fechar" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(63,62,62,0.45)', padding: '0.25rem', display: 'flex' }}>
             <X size={20} />
           </button>
         </div>
@@ -172,7 +172,7 @@ function DrawerStat({ label, value, highlight }: { label: string; value: string;
   return (
     <div style={{ textAlign: 'center', padding: '0.65rem 0.4rem', borderRadius: '0 0.5rem 0.5rem 0.5rem', background: 'rgba(63,62,62,0.04)', border: '1px solid rgba(63,62,62,0.08)' }}>
       <p style={{ fontSize: '1.35rem', fontWeight: 800, fontFamily: 'var(--font-outfit, sans-serif)', color: highlight ?? '#3F3E3E', lineHeight: 1, margin: 0 }}>{value}</p>
-      <p style={{ fontSize: '0.6rem', color: 'rgba(63,62,62,0.45)', marginTop: '0.2rem', margin: '0.2rem 0 0' }}>{label}</p>
+      <p style={{ fontSize: '0.6rem', color: 'rgba(63,62,62,0.45)', margin: '0.2rem 0 0' }}>{label}</p>
     </div>
   )
 }

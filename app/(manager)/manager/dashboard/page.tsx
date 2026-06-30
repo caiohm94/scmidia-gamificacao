@@ -48,7 +48,7 @@ export default async function ManagerDashboard({ searchParams }: Props) {
   const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
 
   const [ranking, kpiCount, kpiPts, kpiInactive, goalsRaw, photosRaw] = await Promise.all([
-    getRanking(supabase, { campaign_id: selectedCampaignId }),
+    getRanking(admin, { campaign_id: selectedCampaignId }),
     admin.from('campaign_participants').select('*', { count: 'exact', head: true }).eq('campaign_id', selectedCampaignId),
     admin.from('point_transactions').select('points').eq('campaign_id', selectedCampaignId).eq('event_date', today).eq('status', 'active'),
     admin.from('campaign_participants').select('*', { count: 'exact', head: true }).eq('campaign_id', selectedCampaignId).lt('last_activity_date', threeDaysAgo).not('last_activity_date', 'is', null),

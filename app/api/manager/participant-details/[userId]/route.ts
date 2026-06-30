@@ -9,7 +9,7 @@ type GoalItem = {
   value_type: string; decimal_places: number; target_period: string | null; is_cumulative: boolean
 }
 type PointItem = {
-  id: string; points: number; event_date: string; description: string | null; rule_name: string | null
+  id: string; points: number; event_date: string; description: string | null; scoring_rules: { name: string } | null
 }
 type GoalWithRule = {
   id: string; scoring_rule_id: string; actual_value: number | null; target_value: number; period_date: string
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
   type TxRow = { id: string; points: number; event_date: string; description: string | null; scoring_rules: { name: string } | null }
   const recentPoints: PointItem[] = ((txRow.data ?? []) as TxRow[]).map(tx => ({
-    id: tx.id, points: tx.points, event_date: tx.event_date, description: tx.description, rule_name: tx.scoring_rules?.name ?? null,
+    id: tx.id, points: tx.points, event_date: tx.event_date, description: tx.description, scoring_rules: tx.scoring_rules ? { name: tx.scoring_rules.name } : null,
   }))
 
   return NextResponse.json({
