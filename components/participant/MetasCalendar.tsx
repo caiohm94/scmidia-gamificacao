@@ -2,7 +2,9 @@
 import { useState } from 'react'
 import { formatValueCompact } from '@/lib/goals/helpers'
 import { CumulativeLineChart } from './CumulativeLineChart'
+import { DailyBarChart } from './DailyBarChart'
 import type { CumDataPoint } from './CumulativeLineChart'
+import type { DailyBarPoint } from './DailyBarChart'
 
 type GoalEntry = {
   id: string
@@ -27,7 +29,6 @@ interface Props {
   is_cumulative?: boolean
 }
 
-// Performance level colours
 function perfColor(pct: number): { bg: string; color: string; border: string } {
   if (pct >= 100) return { bg: 'rgba(141,178,60,0.2)', color: '#8DB23C', border: 'rgba(141,178,60,0.3)' }
   if (pct >= 75)  return { bg: 'rgba(255,223,0,0.12)', color: '#FFDF00', border: 'rgba(255,223,0,0.25)' }
@@ -36,7 +37,6 @@ function perfColor(pct: number): { bg: string; color: string; border: string } {
 
 export function MetasCalendar({ days, goals, year, month, today, rule, is_cumulative }: Props) {
   const [selectedDay, setSelectedDay] = useState<number | null>(null)
-  const [hoveredDay, setHoveredDay] = useState<number | null>(null)
 
   const muted = 'var(--p-muted)'
   const cardBorder = 'var(--p-card-border)'
@@ -60,14 +60,13 @@ export function MetasCalendar({ days, goals, year, month, today, rule, is_cumula
     const pct = hasData ? ((g!.actual_value ?? 0) / g!.target_value) * 100 : -1
 
     let bg = 'var(--p-card-bg)'
-    let color = muted
+    let color = muted as string
     let border = cardBorder as string
-    if (!g || isFuture) { bg = 'transparent'; color = muted }
+    if (!g || isFuture) { bg = 'transparent'; color = muted as string }
     else if (hasData) {
       const c = perfColor(pct)
       bg = c.bg; color = c.color; border = c.border
     }
-
     return { bg, color, border, isToday, pct, g }
   }
 
@@ -80,7 +79,6 @@ export function MetasCalendar({ days, goals, year, month, today, rule, is_cumula
   const selectedPct = Math.min(selectedPctRaw, 100)
   const selectedColor = selectedPctRaw >= 100 ? '#8DB23C' : selectedPctRaw >= 75 ? '#FFDF00' : '#ef4444'
 
-  // Accumulated totals
   const cutoffDate = selectedDate ?? today
   const monthTotalActual = goals.reduce((s, g) => s + (g.actual_value ?? 0), 0)
   const monthTargetUntilCutoff = goals.filter(g => g.period_date <= cutoffDate).reduce((s, g) => s + g.target_value, 0)
@@ -89,19 +87,15 @@ export function MetasCalendar({ days, goals, year, month, today, rule, is_cumula
   const monthAchieved = monthTotalActual >= monthTargetUntilCutoff && monthTargetUntilCutoff > 0
   const monthColor = monthPctRaw >= 100 ? '#8DB23C' : monthPctRaw >= 75 ? '#FFDF00' : '#ef4444'
 
-  // Bar chart data
-  const sparkData = days.map(d => {
+  // Recharts bar chart data for daily view (non-cumulative)
+  const dailyBarData: DailyBarPoint[] = days.map(d => {
     const g = goalForDay(d)
-    if (!g || g.actual_value == null || g.target_value === 0) return null
-    return {
-      pct: (g.actual_value / g.target_value) * 100,
-      val: g.actual_value,
-      target: g.target_value,
-    }
+    if (!g || g.actual_value == null || g.target_value === 0) return { day: d, pct: null, actual: 0, target: 0 }
+    return { day: d, pct: (g.actual_value / g.target_value) * 100, actual: g.actual_value, target: g.target_value }
   })
-  const hasSparkData = sparkData.some(v => v !== null)
+  const hasDailyData = dailyBarData.some(d => d.pct != null)
 
-  // Cumulative chart data (built when is_cumulative and day selected)
+  // Recharts area chart data for cumulative view
   const cumChartData: CumDataPoint[] = (() => {
     if (!is_cumulative) return []
     let runA = 0, runT = 0
@@ -109,13 +103,7 @@ export function MetasCalendar({ days, goals, year, month, today, rule, is_cumula
       const g = goalForDay(d)
       if (g) { runA += g.actual_value ?? 0; runT += g.target_value }
       return { day: d, actual: runA, target: runT }
-    }).filter((_, i) => {
-      const runT = days.slice(0, i + 1).reduce((s, dd) => {
-        const g = goalForDay(dd)
-        return s + (g?.target_value ?? 0)
-      }, 0)
-      return runT > 0
-    })
+    }).filter(p => p.target > 0)
   })()
 
   return (
@@ -123,6 +111,8 @@ export function MetasCalendar({ days, goals, year, month, today, rule, is_cumula
       <p style={{ fontSize: '0.7rem', color: muted, marginBottom: '0.25rem', fontWeight: 500 }}>
         Dias do mês — clique para ver detalhes
       </p>
+
+      {/* Day grid */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
         {days.map(d => {
           const { bg, color, border, isToday, g } = dayColors(d)
@@ -141,7 +131,7 @@ export function MetasCalendar({ days, goals, year, month, today, rule, is_cumula
                 color: isSelected ? '#FFDF00' : isToday ? '#FFDF00' : color,
                 cursor: g ? 'pointer' : 'default',
                 outline: 'none',
-                transition: 'border 0.12s, background 0.12s',
+                transition: 'border 0.12s, background 0.12s, transform 0.1s',
                 transform: isSelected ? 'scale(1.12)' : 'scale(1)',
               }}
               disabled={!g}
@@ -171,15 +161,20 @@ export function MetasCalendar({ days, goals, year, month, today, rule, is_cumula
       {/* Day detail panel */}
       {selectedDay != null && (
         <div style={{
-          background: 'var(--p-card-bg)', border: '1px solid rgba(255,223,0,0.25)',
-          borderRadius: '0 0.75rem 0.75rem 0.75rem', padding: '1rem 1.25rem',
-          display: 'flex', flexDirection: 'column', gap: '0.9rem',
+          background: 'var(--p-card-bg)',
+          border: '1px solid rgba(255,223,0,0.2)',
+          borderRadius: '0 0.75rem 0.75rem 0.75rem',
+          padding: '1rem 1.25rem',
+          display: 'flex', flexDirection: 'column', gap: '1rem',
           animation: 'fadeSlideIn 0.18s ease',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          {/* Panel header */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
             <div>
               <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem', fontFamily: 'var(--font-outfit)' }}>
-                {selectedDate ? new Date(selectedDate + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }) : ''}
+                {selectedDate
+                  ? new Date(selectedDate + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })
+                  : ''}
               </p>
               <p style={{ margin: 0, fontSize: '0.7rem', color: muted, marginTop: '0.1rem' }}>{rule.name}</p>
             </div>
@@ -193,60 +188,46 @@ export function MetasCalendar({ days, goals, year, month, today, rule, is_cumula
 
           {selectedGoal ? (
             <>
+              {/* "Este dia" label for cumulative */}
               {is_cumulative && (
-                <p style={{ margin: 0, fontSize: '0.68rem', color: muted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <p style={{ margin: 0, fontSize: '0.65rem', color: muted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                   Este dia
                 </p>
               )}
+
+              {/* Daily value cards */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.6rem', textAlign: 'center' }}>
-                <div style={{ background: 'var(--p-card-bg)', border: `1px solid ${cardBorder}`, borderRadius: '0 0.5rem 0.5rem 0.5rem', padding: '0.6rem' }}>
-                  <p style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, fontFamily: 'var(--font-outfit)', color: selectedColor }}>
-                    {formatValueCompact(selectedGoal.actual_value ?? 0, vt, dp)}
-                  </p>
-                  <p style={{ margin: 0, fontSize: '0.65rem', color: muted }}>realizado</p>
-                </div>
-                <div style={{ background: 'var(--p-card-bg)', border: `1px solid ${cardBorder}`, borderRadius: '0 0.5rem 0.5rem 0.5rem', padding: '0.6rem' }}>
-                  <p style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, fontFamily: 'var(--font-outfit)', color: 'var(--p-text-dim)' }}>
-                    {formatValueCompact(selectedGoal.target_value, vt, dp)}
-                  </p>
-                  <p style={{ margin: 0, fontSize: '0.65rem', color: muted }}>meta</p>
-                </div>
-                <div style={{ background: selectedPctRaw >= 100 ? 'rgba(141,178,60,0.1)' : selectedPctRaw >= 75 ? 'rgba(255,223,0,0.08)' : 'rgba(239,68,68,0.08)', borderRadius: '0 0.5rem 0.5rem 0.5rem', padding: '0.6rem', border: `1px solid ${selectedColor}30` }}>
-                  <p style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, fontFamily: 'var(--font-outfit)', color: selectedColor }}>
-                    {Math.round(selectedPctRaw)}%
-                  </p>
-                  <p style={{ margin: 0, fontSize: '0.65rem', color: muted }}>{selectedPctRaw >= 100 ? '✅ meta batida' : 'atingido'}</p>
-                </div>
+                <StatCard value={formatValueCompact(selectedGoal.actual_value ?? 0, vt, dp)} label="realizado" color={selectedColor} cardBorder={cardBorder} />
+                <StatCard value={formatValueCompact(selectedGoal.target_value, vt, dp)} label="meta" color="var(--p-text-dim)" cardBorder={cardBorder} />
+                <StatCard
+                  value={`${Math.round(selectedPctRaw)}%`}
+                  label={selectedPctRaw >= 100 ? '✅ meta batida' : 'atingido'}
+                  color={selectedColor}
+                  cardBorder={cardBorder}
+                  tinted={selectedPctRaw}
+                />
               </div>
 
-              {/* Cumulative totals for cumulative rules */}
+              {/* Cumulative section */}
               {is_cumulative && (
                 <>
-                  <p style={{ margin: 0, fontSize: '0.68rem', color: muted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', borderTop: '1px solid var(--p-separator)', paddingTop: '0.75rem' }}>
+                  <div style={{ height: 1, background: 'var(--p-separator, rgba(255,255,255,0.06))' }} />
+                  <p style={{ margin: 0, fontSize: '0.65rem', color: muted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                     Acumulado no mês
                   </p>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.6rem', textAlign: 'center' }}>
-                    <div style={{ background: 'var(--p-card-bg)', border: `1px solid ${cardBorder}`, borderRadius: '0 0.5rem 0.5rem 0.5rem', padding: '0.6rem' }}>
-                      <p style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, fontFamily: 'var(--font-outfit)', color: monthColor }}>
-                        {formatValueCompact(monthTotalActual, vt, dp)}
-                      </p>
-                      <p style={{ margin: 0, fontSize: '0.65rem', color: muted }}>realizado</p>
-                    </div>
-                    <div style={{ background: 'var(--p-card-bg)', border: `1px solid ${cardBorder}`, borderRadius: '0 0.5rem 0.5rem 0.5rem', padding: '0.6rem' }}>
-                      <p style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, fontFamily: 'var(--font-outfit)', color: 'var(--p-text-dim)' }}>
-                        {formatValueCompact(monthTargetUntilCutoff, vt, dp)}
-                      </p>
-                      <p style={{ margin: 0, fontSize: '0.65rem', color: muted }}>{selectedDate ? `orçado até dia ${selectedDay}` : 'orçado até hoje'}</p>
-                    </div>
-                    <div style={{ background: monthPctRaw >= 100 ? 'rgba(141,178,60,0.1)' : monthPctRaw >= 75 ? 'rgba(255,223,0,0.08)' : 'rgba(239,68,68,0.08)', borderRadius: '0 0.5rem 0.5rem 0.5rem', padding: '0.6rem', border: `1px solid ${monthColor}30` }}>
-                      <p style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, fontFamily: 'var(--font-outfit)', color: monthColor }}>
-                        {Math.round(monthPctRaw)}%
-                      </p>
-                      <p style={{ margin: 0, fontSize: '0.65rem', color: muted }}>{monthAchieved ? '✅ meta batida' : 'atingido'}</p>
-                    </div>
+                    <StatCard value={formatValueCompact(monthTotalActual, vt, dp)} label="realizado" color={monthColor} cardBorder={cardBorder} />
+                    <StatCard value={formatValueCompact(monthTargetUntilCutoff, vt, dp)} label={`orçado até dia ${selectedDay}`} color="var(--p-text-dim)" cardBorder={cardBorder} />
+                    <StatCard
+                      value={`${Math.round(monthPctRaw)}%`}
+                      label={monthAchieved ? '✅ meta batida' : 'atingido'}
+                      color={monthColor}
+                      cardBorder={cardBorder}
+                      tinted={monthPctRaw}
+                    />
                   </div>
 
-                  {/* Recharts cumulative line chart */}
+                  {/* Cumulative line chart (only for cumulative rules) */}
                   {cumChartData.length > 1 && (
                     <CumulativeLineChart
                       data={cumChartData}
@@ -259,9 +240,9 @@ export function MetasCalendar({ days, goals, year, month, today, rule, is_cumula
 
               {/* Progress bar */}
               <div>
-                <div style={{ height: 10, borderRadius: 5, background: 'var(--p-track, rgba(0,0,0,0.09))', overflow: 'hidden' }}>
+                <div style={{ position: 'relative', height: 8, borderRadius: 4, background: 'var(--p-track, rgba(0,0,0,0.12))', overflow: 'hidden' }}>
                   <div style={{
-                    height: '100%', borderRadius: 5,
+                    position: 'absolute', left: 0, top: 0, height: '100%', borderRadius: 4,
                     width: `${is_cumulative ? monthPct : selectedPct}%`,
                     background: is_cumulative ? monthColor : selectedColor,
                     transition: 'width 0.6s cubic-bezier(0.25,0.46,0.45,0.94)',
@@ -269,63 +250,13 @@ export function MetasCalendar({ days, goals, year, month, today, rule, is_cumula
                 </div>
               </div>
 
-              {/* CSS bar chart — evolução do mês */}
-              {hasSparkData && (
-                <div>
-                  <p style={{ margin: 0, marginBottom: '0.5rem', fontSize: '0.65rem', color: muted }}>Evolução diária</p>
-                  <div style={{ minHeight: 32, marginBottom: '0.4rem' }}>
-                    {hoveredDay !== null && (() => {
-                      const hi = days.indexOf(hoveredDay)
-                      const hEntry = sparkData[hi]
-                      const hGoal = goalForDay(hoveredDay)
-                      if (!hEntry || !hGoal) return null
-                      const ds = dateStr(hoveredDay)
-                      const dateLabel = new Date(ds + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' })
-                      const pctLabel = Math.round(hEntry.pct)
-                      const pctColor = hEntry.pct >= 100 ? '#8DB23C' : hEntry.pct >= 75 ? '#FFDF00' : '#ef4444'
-                      return (
-                        <div style={{
-                          background: 'rgba(13,26,15,0.88)', borderRadius: '0 0.4rem 0.4rem 0.4rem',
-                          padding: '0.35rem 0.75rem', display: 'flex', alignItems: 'center',
-                          gap: '0.75rem', fontSize: '0.75rem', flexWrap: 'wrap',
-                        }}>
-                          <span style={{ color: 'rgba(255,255,255,0.45)' }}>{dateLabel}</span>
-                          <span style={{ color: '#8DB23C', fontWeight: 700 }}>✓ {formatValueCompact(hEntry.val, vt, dp)}</span>
-                          <span style={{ color: 'rgba(255,255,255,0.45)' }}>□ {formatValueCompact(hGoal.target_value, vt, dp)}</span>
-                          <span style={{ color: pctColor, fontWeight: 600 }}>{pctLabel}%</span>
-                        </div>
-                      )
-                    })()}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'flex-end', height: 60, gap: '2px' }}>
-                    {days.map((d, i) => {
-                      const entry = sparkData[i]
-                      const isThisDay = d === selectedDay
-                      const isHovered = hoveredDay === d
-                      if (!entry) return <div key={d} style={{ flex: 1 }} />
-                      const { pct } = entry
-                      const barH = Math.max(3, (Math.min(pct, 120) / 120) * 56)
-                      const barColor = pct >= 100 ? '#8DB23C' : pct >= 75 ? '#FFDF00' : '#ef4444'
-                      return (
-                        <div
-                          key={d}
-                          style={{ flex: 1, display: 'flex', alignItems: 'flex-end', height: '100%', cursor: 'pointer' }}
-                          onMouseEnter={() => setHoveredDay(d)}
-                          onMouseLeave={() => setHoveredDay(null)}
-                        >
-                          <div style={{
-                            width: '100%', height: barH,
-                            background: isThisDay ? '#FFDF00' : barColor,
-                            opacity: isThisDay ? 1 : isHovered ? 1 : 0.55,
-                            borderRadius: '2px 2px 0 0',
-                            transition: 'opacity 0.1s',
-                          }} />
-                        </div>
-                      )
-                    })}
-                  </div>
-                  <div style={{ height: 1, background: 'var(--p-separator, rgba(0,0,0,0.06))' }} />
-                </div>
+              {/* Daily bar chart (only for non-cumulative rules) */}
+              {!is_cumulative && hasDailyData && (
+                <DailyBarChart
+                  data={dailyBarData}
+                  selectedDay={selectedDay}
+                  formatV={v => formatValueCompact(v, vt, dp)}
+                />
               )}
             </>
           ) : (
@@ -338,10 +269,29 @@ export function MetasCalendar({ days, goals, year, month, today, rule, is_cumula
 
       <style>{`
         @keyframes fadeSlideIn {
-          from { opacity: 0; transform: translateY(-6px); }
+          from { opacity: 0; transform: translateY(-8px); }
           to   { opacity: 1; transform: translateY(0); }
         }
       `}</style>
+    </div>
+  )
+}
+
+function StatCard({
+  value, label, color, cardBorder, tinted,
+}: {
+  value: string; label: string; color: string; cardBorder: string; tinted?: number
+}) {
+  const bg = tinted != null
+    ? tinted >= 100 ? 'rgba(141,178,60,0.1)' : tinted >= 75 ? 'rgba(255,223,0,0.07)' : 'rgba(239,68,68,0.08)'
+    : 'var(--p-card-bg)'
+  const border = tinted != null
+    ? tinted >= 100 ? 'rgba(141,178,60,0.25)' : tinted >= 75 ? 'rgba(255,223,0,0.2)' : 'rgba(239,68,68,0.2)'
+    : cardBorder
+  return (
+    <div style={{ background: bg, border: `1px solid ${border}`, borderRadius: '0 0.5rem 0.5rem 0.5rem', padding: '0.6rem 0.4rem' }}>
+      <p style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800, fontFamily: 'var(--font-outfit)', color }}>{value}</p>
+      <p style={{ margin: 0, fontSize: '0.62rem', color: 'var(--p-muted)', marginTop: '0.1rem' }}>{label}</p>
     </div>
   )
 }

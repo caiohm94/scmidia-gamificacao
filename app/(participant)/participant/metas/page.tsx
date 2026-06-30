@@ -112,6 +112,7 @@ export default async function MetasPage({
                 target={barTarget}
                 valueType={rule?.value_type ?? 'number'}
                 decimalPlaces={rule?.decimal_places ?? 0}
+                size="lg"
               />
 
               {!isMonthly && rule && (
