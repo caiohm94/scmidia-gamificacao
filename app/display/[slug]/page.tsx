@@ -409,9 +409,12 @@ function DisplayPanel() {
         { event: 'INSERT', schema: 'public', table: 'celebration_events', filter: `campaign_id=eq.${campRow.id}` },
         async (payload) => {
           const ev = payload.new as { user_id: string; points: number; rule_name: string | null; message: string | null }
-          const { data: u } = await supabase.from('users').select('name, avatar_url').eq('id', ev.user_id).single()
-          const user = u as { name: string; avatar_url: string | null } | null
-          setCelebration({ user_id: ev.user_id, points: ev.points, rule_name: ev.rule_name ?? '', message: ev.message ?? '', user_name: user?.name, avatar_url: user?.avatar_url ?? undefined })
+          const [{ data: u }, { data: cp }] = await Promise.all([
+            supabase.from('users').select('name').eq('id', ev.user_id).single(),
+            supabase.from('campaign_participants').select('photo_url').eq('user_id', ev.user_id).eq('campaign_id', campRow.id).single(),
+          ])
+          const photo = (cp as { photo_url: string | null } | null)?.photo_url ?? undefined
+          setCelebration({ user_id: ev.user_id, points: ev.points, rule_name: ev.rule_name ?? '', message: ev.message ?? '', user_name: (u as { name: string } | null)?.name, avatar_url: photo })
         }).subscribe()
     }
     init()

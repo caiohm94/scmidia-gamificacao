@@ -19,53 +19,47 @@ interface Props {
 const DURATION_MS = 7000
 const COLORS = ['#FFDF00', '#8DB23C', '#BACB3A', '#FFFFFF', '#FF6B35', '#FFD700', '#5C7435', '#f0f0f0']
 
-function playGoalSound(ctx: AudioContext) {
+function playVuvuzela(ctx: AudioContext) {
   const t = ctx.currentTime
+  const BASE = 233 // Bb3 — pitch clássico de vuvuzela
+  const SUSTAIN = 3.0
 
-  // Air horn stab
-  const osc = ctx.createOscillator()
-  const oscGain = ctx.createGain()
-  osc.type = 'sawtooth'
-  osc.frequency.setValueAtTime(880, t)
-  osc.frequency.exponentialRampToValueAtTime(440, t + 0.45)
-  oscGain.gain.setValueAtTime(0.55, t)
-  oscGain.gain.exponentialRampToValueAtTime(0.001, t + 0.5)
-  osc.connect(oscGain)
-  oscGain.connect(ctx.destination)
-  osc.start(t)
-  osc.stop(t + 0.5)
+  // Master envelope: ataque rápido, sustain longo
+  const master = ctx.createGain()
+  master.gain.setValueAtTime(0, t)
+  master.gain.linearRampToValueAtTime(0.85, t + 0.04)
+  master.gain.setValueAtTime(0.85, t + SUSTAIN)
+  master.gain.linearRampToValueAtTime(0, t + SUSTAIN + 0.15)
+  master.connect(ctx.destination)
 
-  // Crowd roar — bandpass-filtered noise
-  const bufLen = Math.floor(ctx.sampleRate * 4)
-  const buf = ctx.createBuffer(2, bufLen, ctx.sampleRate)
-  for (let ch = 0; ch < 2; ch++) {
-    const d = buf.getChannelData(ch)
-    for (let i = 0; i < bufLen; i++) d[i] = Math.random() * 2 - 1
-  }
-  const noise = ctx.createBufferSource()
-  noise.buffer = buf
-
+  // Bandpass para dar timbre de "corneta"
   const bp = ctx.createBiquadFilter()
   bp.type = 'bandpass'
-  bp.frequency.value = 900
-  bp.Q.value = 0.7
+  bp.frequency.value = 650
+  bp.Q.value = 0.6
+  bp.connect(master)
 
-  const ls = ctx.createBiquadFilter()
-  ls.type = 'lowshelf'
-  ls.frequency.value = 400
-  ls.gain.value = 10
+  // Várias vuvuzelas levemente desafinadas (efeito estádio)
+  const voices: Array<{ freq: number; vol: number; type: OscillatorType; delay: number }> = [
+    { freq: BASE,       vol: 0.38, type: 'sawtooth', delay: 0 },
+    { freq: BASE - 5,   vol: 0.28, type: 'sawtooth', delay: 0.06 },
+    { freq: BASE + 7,   vol: 0.22, type: 'sawtooth', delay: 0.12 },
+    { freq: BASE - 9,   vol: 0.18, type: 'sawtooth', delay: 0.18 },
+    { freq: BASE * 2,   vol: 0.10, type: 'square',   delay: 0 },
+    { freq: BASE * 3,   vol: 0.06, type: 'sawtooth', delay: 0 },
+  ]
 
-  const gn = ctx.createGain()
-  gn.gain.setValueAtTime(0, t + 0.1)
-  gn.gain.linearRampToValueAtTime(0.55, t + 0.6)
-  gn.gain.setValueAtTime(0.55, t + 2.0)
-  gn.gain.linearRampToValueAtTime(0, t + 4.0)
-
-  noise.connect(bp)
-  bp.connect(ls)
-  ls.connect(gn)
-  gn.connect(ctx.destination)
-  noise.start(t + 0.1)
+  voices.forEach(v => {
+    const osc = ctx.createOscillator()
+    osc.type = v.type
+    osc.frequency.value = v.freq
+    const g = ctx.createGain()
+    g.gain.value = v.vol
+    osc.connect(g)
+    g.connect(bp)
+    osc.start(t + v.delay)
+    osc.stop(t + SUSTAIN + 0.2)
+  })
 }
 
 export function CelebrationOverlay({ event, onDone, audioCtxRef }: Props) {
@@ -87,7 +81,7 @@ export function CelebrationOverlay({ event, onDone, audioCtxRef }: Props) {
     if (!event) { playedRef.current = false; return }
     if (!playedRef.current && audioCtxRef.current) {
       playedRef.current = true
-      playGoalSound(audioCtxRef.current)
+      playVuvuzela(audioCtxRef.current)
     }
     const t = setTimeout(onDone, DURATION_MS)
     return () => clearTimeout(t)
