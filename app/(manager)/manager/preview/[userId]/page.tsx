@@ -11,6 +11,7 @@ import { GoalProgressBar } from '@/components/participant/GoalProgressBar'
 import { MetasCalendar } from '@/components/participant/MetasCalendar'
 import { PreviewShell } from '@/components/participant/PreviewShell'
 import { getDaysInMonth, todayBrazil } from '@/lib/goals/helpers'
+import { MonthNav } from '@/components/participant/MonthNav'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import Image from 'next/image'
@@ -36,11 +37,11 @@ export default async function PreviewPage({
   searchParams,
 }: {
   params: Promise<{ userId: string }>
-  searchParams: Promise<{ tab?: string }>
+  searchParams: Promise<{ tab?: string; month?: string }>
 }) {
   await requireRole('manager')
   const { userId } = await params
-  const { tab = 'painel' } = await searchParams
+  const { tab = 'painel', month: monthParam } = await searchParams
   const admin = createAdminClient()
 
   const { data: userRaw } = await admin.from('users').select('*, teams(name, color)').eq('id', userId).single()
@@ -67,8 +68,11 @@ export default async function PreviewPage({
   let rankingRows: Awaited<ReturnType<typeof getRanking>> = []
   let todayPreviewGoals: GoalWithRule[] = []
   let allPreviewGoals: GoalWithRule[] = []
+  let navMonthGoals: GoalWithRule[] = []
   let previewYear = 0
   let previewMonth = 0
+  let navYear = 0
+  let navMonth = 0
 
   if (campaign) {
     rankingRows = await getRanking(admin, { campaign_id: campaign.id })
@@ -102,6 +106,27 @@ export default async function PreviewPage({
       .gte('period_date', monthStart)
       .lte('period_date', monthEnd)
     allPreviewGoals = (goalsRaw ?? []) as GoalWithRule[]
+
+    // Nav month for metas tab (may differ from current month)
+    const todayMonth = `${gy}-${String(gm).padStart(2, '0')}`
+    const navMonthStr = monthParam?.match(/^\d{4}-\d{2}$/) ? monthParam : todayMonth
+    const [ny, nm] = navMonthStr.split('-').map(Number)
+    navYear = ny
+    navMonth = nm
+    if (navMonthStr === todayMonth) {
+      navMonthGoals = allPreviewGoals
+    } else {
+      const navStart = `${ny}-${String(nm).padStart(2, '0')}-01`
+      const navLastDay = new Date(ny, nm, 0).getDate()
+      const navEnd = `${ny}-${String(nm).padStart(2, '0')}-${String(navLastDay).padStart(2, '0')}`
+      const { data: navRaw } = await admin
+        .from('participant_goals')
+        .select('id, scoring_rule_id, actual_value, target_value, period_date, scoring_rules(name, value_type, decimal_places, target_period, is_cumulative)')
+        .eq('user_id', userId)
+        .gte('period_date', navStart)
+        .lte('period_date', navEnd)
+      navMonthGoals = (navRaw ?? []) as GoalWithRule[]
+    }
 
     // Fetch participant photo for the active campaign
     const { data: cp } = await admin
@@ -312,21 +337,22 @@ export default async function PreviewPage({
         {/* ---- METAS ---- */}
         {tab === 'metas' && (() => {
           const byRule = new Map<string, GoalWithRule[]>()
-          for (const g of allPreviewGoals) {
+          for (const g of navMonthGoals) {
             const arr = byRule.get(g.scoring_rule_id) ?? []
             arr.push(g)
             byRule.set(g.scoring_rule_id, arr)
           }
-          const days = getDaysInMonth(previewYear, previewMonth)
+          const days = getDaysInMonth(navYear, navMonth)
           const todayStr = todayBrazil()
-          const monthLabel = previewYear > 0
-            ? new Date(previewYear, previewMonth - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+          const navMonthStr = `${navYear}-${String(navMonth).padStart(2, '0')}`
+          const navMonthLabel = navYear > 0
+            ? new Date(navYear, navMonth - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
             : ''
           return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <h1 style={{ fontSize: '1.5rem', fontWeight: 800, fontFamily: 'var(--font-outfit)', margin: 0 }}>🎯 Minhas Metas</h1>
-                <span style={{ fontSize: '0.82rem', color: muted, textTransform: 'capitalize' }}>{monthLabel}</span>
+                <MonthNav yearMonth={navMonthStr} label={navMonthLabel} basePath={`/manager/preview/${userId}?tab=metas`} />
               </div>
               {byRule.size === 0 && (
                 <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '0 1rem 1rem 1rem', padding: '3rem', textAlign: 'center' }}>
@@ -336,22 +362,41 @@ export default async function PreviewPage({
               {[...byRule.entries()].map(([ruleId, ruleGoals]) => {
                 const rule = ruleGoals[0].scoring_rules
                 const isMonthly = rule?.target_period === 'monthly'
-                const monthlyGoal = isMonthly ? ruleGoals[0] : null
-                const totalActual = ruleGoals.reduce((s, g) => s + (g.actual_value ?? 0), 0)
-                const totalTarget = ruleGoals.reduce((s, g) => s + g.target_value, 0)
+                const isCumulative = rule?.is_cumulative ?? false
+                const monthStart = `${navYear}-${String(navMonth).padStart(2, '0')}-01`
+                const monthlyGoal = isMonthly ? ruleGoals.find(g => g.period_date === monthStart) ?? ruleGoals[0] : null
+
+                let barLabel: string
+                let barActual: number | null
+                let barTarget: number
+                if (isMonthly) {
+                  barLabel = 'Meta do mês'
+                  barActual = monthlyGoal?.actual_value ?? null
+                  barTarget = monthlyGoal?.target_value ?? 0
+                } else if (isCumulative) {
+                  barLabel = 'Acumulado até hoje'
+                  barActual = ruleGoals.reduce((s, g) => s + (g.actual_value ?? 0), 0)
+                  barTarget = ruleGoals.filter(g => g.period_date <= todayStr).reduce((s, g) => s + g.target_value, 0)
+                } else {
+                  barLabel = 'Meta de hoje'
+                  const todayGoal = ruleGoals.find(g => g.period_date === todayStr)
+                  barActual = todayGoal?.actual_value ?? null
+                  barTarget = todayGoal?.target_value ?? 0
+                }
+
                 return (
                   <div key={ruleId} style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '0 1rem 1rem 1rem', overflow: 'hidden' }}>
                     <div style={{ padding: '0.85rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <p style={{ fontWeight: 700, fontSize: '0.9rem', fontFamily: 'var(--font-outfit)', margin: 0 }}>{rule?.name ?? 'Meta'}</p>
                       <span style={{ fontSize: '0.65rem', color: muted, background: 'rgba(255,255,255,0.06)', padding: '0.1rem 0.4rem', borderRadius: '0.2rem' }}>
-                        {isMonthly ? 'Mensal' : 'Diário'}
+                        {isMonthly ? 'Mensal' : isCumulative ? 'Acumulativo' : 'Diário'}
                       </span>
                     </div>
                     <div style={{ padding: '1rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                       <GoalProgressBar
-                        label={isMonthly ? 'Meta do mês' : 'Progresso do mês'}
-                        actual={isMonthly ? (monthlyGoal?.actual_value ?? null) : totalActual}
-                        target={isMonthly ? (monthlyGoal?.target_value ?? 0) : totalTarget}
+                        label={barLabel}
+                        actual={barActual}
+                        target={barTarget}
                         valueType={rule?.value_type ?? 'number'}
                         decimalPlaces={rule?.decimal_places ?? 0}
                       />
@@ -364,15 +409,15 @@ export default async function PreviewPage({
                             target_value: g.target_value,
                             period_date: g.period_date,
                           }))}
-                          year={previewYear}
-                          month={previewMonth}
+                          year={navYear}
+                          month={navMonth}
                           today={todayStr}
                           rule={{
                             name: rule.name,
                             value_type: rule.value_type,
                             decimal_places: rule.decimal_places,
                           }}
-                          is_cumulative={rule.is_cumulative ?? false}
+                          is_cumulative={isCumulative}
                         />
                       )}
                     </div>

@@ -48,6 +48,7 @@ export function ThemeWrapper({ children, headerContent }: { children: React.Reac
   function pick(key: ThemeKey) {
     setTheme(key)
     localStorage.setItem('participant_theme', key)
+    window.dispatchEvent(new CustomEvent('sc-theme', { detail: key }))
   }
 
   const t = THEMES[theme]

@@ -75,7 +75,8 @@ export function MetasCalendar({ days, goals, year, month, today, rule, is_cumula
   const cutoffDate = selectedDate ?? today
   const monthTotalActual = goals.reduce((s, g) => s + (g.actual_value ?? 0), 0)
   const monthTargetUntilCutoff = goals.filter(g => g.period_date <= cutoffDate).reduce((s, g) => s + g.target_value, 0)
-  const monthPct = monthTargetUntilCutoff > 0 ? Math.min((monthTotalActual / monthTargetUntilCutoff) * 100, 100) : 0
+  const monthPctRaw = monthTargetUntilCutoff > 0 ? (monthTotalActual / monthTargetUntilCutoff) * 100 : 0
+  const monthPct = Math.min(monthPctRaw, 100) // bar only — display uses raw
   const monthAchieved = monthTotalActual >= monthTargetUntilCutoff && monthTargetUntilCutoff > 0
 
   // Bar chart data
@@ -139,6 +140,52 @@ export function MetasCalendar({ days, goals, year, month, today, rule, is_cumula
           </div>
         ))}
       </div>
+
+      {/* Cumulative line chart — always visible for cumulative indicators */}
+      {is_cumulative && (() => {
+        const cumActual: number[] = []
+        const cumTarget: number[] = []
+        let runA = 0, runT = 0
+        for (const d of days) {
+          const g = goalForDay(d)
+          if (g) { runA += g.actual_value ?? 0; runT += g.target_value }
+          cumActual.push(runA)
+          cumTarget.push(runT)
+        }
+        const maxVal = Math.max(...cumActual, ...cumTarget, 1)
+        const n = days.length
+        const toX = (i: number) => ((i / Math.max(n - 1, 1)) * 98 + 1).toFixed(2)
+        const toY = (v: number) => (38 - (v / maxVal) * 36).toFixed(2)
+        const tPts = days.map((_, i) => `${toX(i)},${toY(cumTarget[i])}`).join(' ')
+        const aPts = days.map((_, i) => `${toX(i)},${toY(cumActual[i])}`).join(' ')
+        const hasData = cumTarget.some(v => v > 0)
+        if (!hasData) return null
+        return (
+          <div style={{ marginTop: '0.25rem' }}>
+            <div style={{ display: 'flex', gap: '1rem', marginBottom: '0.35rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                <div style={{ width: 14, height: 2, background: '#8DB23C', borderRadius: 1 }} />
+                <span style={{ fontSize: '0.62rem', color: muted }}>Realizado</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                <div style={{ width: 14, height: 2, background: 'var(--p-muted, rgba(255,255,255,0.3))', borderRadius: 1, borderTop: '1px dashed var(--p-muted, rgba(255,255,255,0.3))' }} />
+                <span style={{ fontSize: '0.62rem', color: muted }}>Orçado</span>
+              </div>
+            </div>
+            <svg viewBox="0 0 100 40" style={{ width: '100%', height: 70, display: 'block' }}>
+              {/* zero line */}
+              <line x1="1" y1="38" x2="99" y2="38" stroke="var(--p-separator, rgba(255,255,255,0.05))" strokeWidth="0.5" />
+              {/* target line (dashed) */}
+              <polyline points={tPts} fill="none" strokeWidth="0.8" strokeDasharray="2,1.2"
+                style={{ stroke: 'var(--p-muted, rgba(255,255,255,0.3))' }} />
+              {/* actual area fill */}
+              <polyline points={`1,38 ${aPts} ${toX(n - 1)},38`} fill="rgba(141,178,60,0.1)" stroke="none" />
+              {/* actual line */}
+              <polyline points={aPts} fill="none" stroke="#8DB23C" strokeWidth="1.2" strokeLinejoin="round" strokeLinecap="round" />
+            </svg>
+          </div>
+        )
+      })()}
 
       {/* Day detail panel */}
       {selectedDay != null && (
@@ -213,7 +260,7 @@ export function MetasCalendar({ days, goals, year, month, today, rule, is_cumula
                     </div>
                     <div style={{ background: monthAchieved ? 'rgba(141,178,60,0.1)' : 'rgba(249,115,22,0.08)', borderRadius: '0 0.5rem 0.5rem 0.5rem', padding: '0.6rem', border: `1px solid ${monthAchieved ? 'rgba(141,178,60,0.25)' : 'rgba(249,115,22,0.2)'}` }}>
                       <p style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, fontFamily: 'var(--font-outfit)', color: monthAchieved ? '#8DB23C' : '#f97316' }}>
-                        {Math.round(monthPct)}%
+                        {Math.round(monthPctRaw)}%
                       </p>
                       <p style={{ margin: 0, fontSize: '0.65rem', color: muted }}>{monthAchieved ? '✅ meta batida' : 'atingido'}</p>
                     </div>

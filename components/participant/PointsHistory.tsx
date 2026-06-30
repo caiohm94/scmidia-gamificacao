@@ -17,7 +17,11 @@ export function PointsHistory({ points }: { points: PointEntry[] }) {
     const apply = () => setDark(localStorage.getItem('participant_theme') === 'black')
     apply()
     window.addEventListener('storage', apply)
-    return () => window.removeEventListener('storage', apply)
+    window.addEventListener('sc-theme', apply)
+    return () => {
+      window.removeEventListener('storage', apply)
+      window.removeEventListener('sc-theme', apply)
+    }
   }, [])
 
   const text = dark ? 'rgba(255,255,255,0.85)' : '#2a3d2b'
