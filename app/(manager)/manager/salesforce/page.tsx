@@ -4,6 +4,7 @@ import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { CloudDownload } from 'lucide-react'
 import { RematchButton } from '@/components/salesforce/RematchButton'
+import { SFDiagnostic } from '@/components/salesforce/SFDiagnostic'
 
 type RecordRow = {
   id: string; sf_id: string; sf_created_at: string | null; imported_at: string
@@ -41,7 +42,7 @@ export default async function SalesforceImportsPage({ searchParams }: Props) {
   const supabase = createAdminClient()
 
   const { data: rules } = await supabase
-    .from('scoring_rules').select('id, name')
+    .from('scoring_rules').select('id, name, sf_soql, sf_frequency, sf_alias_field')
     .eq('data_origin', 'salesforce').eq('is_active', true).order('name')
 
   // Records tab
@@ -151,7 +152,12 @@ export default async function SalesforceImportsPage({ searchParams }: Props) {
           <a href={tabLink('records')} style={tabStyle('records')}>Registros</a>
           <a href={tabLink('log')} style={tabStyle('log')}>Log de Sincronização</a>
           <a href={tabLink('aliases')} style={tabStyle('aliases')}>Aliases sem match</a>
+          <a href={tabLink('diagnostico')} style={tabStyle('diagnostico')}>🔧 Diagnóstico</a>
         </div>
+
+        {tab === 'diagnostico' && (
+          <SFDiagnostic rules={rules ?? []} />
+        )}
 
         {tab === 'records' && (
           <>
