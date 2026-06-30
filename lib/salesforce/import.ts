@@ -145,7 +145,8 @@ export async function importRule(ruleId: string, triggeredBy: string): Promise<I
     if (existingSet.has(sfId)) { result.skipped++; result.already_existing++; continue }
 
     const alias = String(getField(sfRow, aliasField) ?? '').trim()
-    const ownerName = String(getField(sfRow, 'Owner.Name') ?? getField(sfRow, 'Name') ?? '').trim() || null
+    const ownerNameField = aliasField.includes('.') ? aliasField.replace(/\.[^.]+$/, '.Name') : 'Name'
+    const ownerName = String(getField(sfRow, ownerNameField) ?? getField(sfRow, 'Owner.Name') ?? getField(sfRow, 'Name') ?? '').trim() || null
     const accountName = String(getField(sfRow, 'Account.Name') ?? sfRow['AccountName'] ?? '').trim() || null
     const description = String(sfRow['Description'] ?? sfRow['Subject'] ?? '').trim() || null
     const sfCreatedAt = sfRow['CreatedDate'] ? String(sfRow['CreatedDate']) : null
