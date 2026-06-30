@@ -31,7 +31,7 @@ export function SFDiagnostic({ rules }: Props) {
     setConnLoading(true)
     setConnStatus(null)
     try {
-      const res = await fetch('/api/integrations/salesforce/test-connection')
+      const res = await fetch('/api/integrations/salesforce/test-connection', { method: 'POST' })
       const data = await res.json()
       setConnStatus(data)
     } catch { setConnStatus({ ok: false, error: 'Erro de rede' }) }
@@ -259,24 +259,45 @@ export function SFDiagnostic({ rules }: Props) {
             )}
 
             {/* Diagnóstico resumido */}
-            <div style={{ padding: '0.75rem 1rem', background: 'rgba(63,62,62,0.03)', borderRadius: '0 0.5rem 0.5rem 0.5rem', fontSize: '0.78rem', color: '#3F3E3E' }}>
-              <p style={{ fontWeight: 700, margin: '0 0 0.4rem' }}>📊 Diagnóstico:</p>
-              {debugResult.soql_error && <p style={{ margin: '0.15rem 0', color: '#dc3545' }}>✗ SOQL com erro — verifique as credenciais SF e a query.</p>}
-              {!debugResult.soql_error && debugResult.sf_row_count === 0 && <p style={{ margin: '0.15rem 0', color: '#8B6914' }}>⚠ SOQL retornou 0 registros — ajuste o filtro da query.</p>}
-              {!debugResult.soql_error && debugResult.sf_row_count > 0 && (() => {
-                const sfAliases = new Set(debugResult.sf_aliases.map(a => String(a.alias_raw ?? '').trim()).filter(Boolean))
-                const participantsWithAlias = (debugResult.participants ?? []).filter(p => p.sf_alias)
-                const matched = participantsWithAlias.filter(p => sfAliases.has(p.sf_alias!))
-                const noAlias = (debugResult.participants ?? []).filter(p => !p.sf_alias)
-                return (
-                  <>
-                    {noAlias.length > 0 && <p style={{ margin: '0.15rem 0', color: '#dc3545' }}>✗ {noAlias.length} participante(s) sem sf_alias configurado: {noAlias.map(p => p.name).join(', ')}</p>}
-                    {participantsWithAlias.length > 0 && matched.length === 0 && <p style={{ margin: '0.15rem 0', color: '#dc3545' }}>✗ Nenhum alias dos participantes bate com os aliases do SF. Verifique o campo alias ({debugResult.rule?.sf_alias_field}).</p>}
-                    {matched.length > 0 && <p style={{ margin: '0.15rem 0', color: '#5C7435' }}>✓ {matched.length} participante(s) com alias correspondente no SF — pronto para importar.</p>}
-                  </>
-                )
-              })()}
-            </div>
+            {(() => {
+              const sfAliases = new Set(debugResult.sf_aliases.map(a => String(a.alias_raw ?? '').trim()).filter(Boolean))
+              const uniqueSFAliases = Array.from(sfAliases)
+              const participantsWithAlias = (debugResult.participants ?? []).filter(p => p.sf_alias)
+              const matched = participantsWithAlias.filter(p => sfAliases.has(p.sf_alias!))
+              const noAlias = (debugResult.participants ?? []).filter(p => !p.sf_alias)
+              const wrongAlias = participantsWithAlias.filter(p => !sfAliases.has(p.sf_alias!))
+
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <div style={{ padding: '0.75rem 1rem', background: 'rgba(63,62,62,0.03)', borderRadius: '0 0.5rem 0.5rem 0.5rem', fontSize: '0.78rem', color: '#3F3E3E' }}>
+                    <p style={{ fontWeight: 700, margin: '0 0 0.4rem' }}>📊 Diagnóstico:</p>
+                    {debugResult.soql_error && <p style={{ margin: '0.15rem 0', color: '#dc3545' }}>✗ SOQL com erro — verifique as credenciais SF e a query.</p>}
+                    {!debugResult.soql_error && debugResult.sf_row_count === 0 && <p style={{ margin: '0.15rem 0', color: '#8B6914' }}>⚠ SOQL retornou 0 registros — ajuste o filtro da query (ex: remova o filtro de data).</p>}
+                    {noAlias.length > 0 && <p style={{ margin: '0.15rem 0', color: '#dc3545' }}>✗ {noAlias.length} participante(s) sem sf_alias: <strong>{noAlias.map(p => p.name).join(', ')}</strong></p>}
+                    {wrongAlias.length > 0 && <p style={{ margin: '0.15rem 0', color: '#dc3545' }}>✗ {wrongAlias.length} participante(s) com alias que não bate: <strong>{wrongAlias.map(p => `${p.name} (${p.sf_alias})`).join(', ')}</strong></p>}
+                    {matched.length > 0 && <p style={{ margin: '0.15rem 0', color: '#5C7435' }}>✓ {matched.length} participante(s) com alias correto — pronto para importar.</p>}
+                  </div>
+
+                  {/* Aliases únicos do SF — copiar para configurar nos usuários */}
+                  {uniqueSFAliases.length > 0 && (wrongAlias.length > 0 || noAlias.length > 0) && (
+                    <div style={{ padding: '0.75rem 1rem', background: 'rgba(255,193,7,0.06)', border: '1px solid rgba(255,193,7,0.25)', borderRadius: '0 0.5rem 0.5rem 0.5rem', fontSize: '0.78rem' }}>
+                      <p style={{ fontWeight: 700, color: '#8B6914', margin: '0 0 0.5rem' }}>
+                        🔑 Aliases únicos que o SF retornou para este indicador:
+                      </p>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.5rem' }}>
+                        {uniqueSFAliases.map(a => (
+                          <code key={a} style={{ fontSize: '0.82rem', background: 'rgba(255,193,7,0.15)', color: '#6b4c00', padding: '0.15rem 0.5rem', borderRadius: '0.25rem', fontWeight: 700 }}>{a}</code>
+                        ))}
+                      </div>
+                      <p style={{ color: 'rgba(63,62,62,0.6)', margin: 0, lineHeight: 1.5 }}>
+                        → Acesse <strong>Usuários → Editar</strong> de cada participante e coloque o alias acima correspondente no campo <strong>"Alias Salesforce"</strong>.
+                        <br/>O alias deve ser exatamente igual (maiúsculas/minúsculas importam).
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
           </div>
         )}
       </div>
