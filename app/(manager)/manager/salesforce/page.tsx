@@ -19,6 +19,8 @@ type LogRow = {
   users: { name: string } | null
 }
 
+type AliasRow = { sf_alias: string | null; owner_name: string | null; count: number; matched: boolean }
+
 type Props = { searchParams: Promise<{ from?: string; to?: string; owner?: string; rule_id?: string; tab?: string }> }
 
 const statusStyle: Record<string, React.CSSProperties> = {
@@ -55,6 +57,44 @@ export default async function SalesforceImportsPage({ searchParams }: Props) {
     if (params.rule_id) query = query.eq('scoring_rule_id', params.rule_id)
     const { data } = await query
     records = (data ?? []) as unknown as RecordRow[]
+  }
+
+  // Aliases tab — diagnóstico de match
+  let unmatched: AliasRow[] = []
+  let participantAliases: { id: string; name: string; sf_alias: string | null }[] = []
+  if (tab === 'aliases') {
+    // Aliases que chegaram do SF sem match (user_id null)
+    const { data: noMatchRecords } = await supabase
+      .from('salesforce_records')
+      .select('sf_alias, owner_name, user_id')
+      .is('transaction_id', null)
+
+    // Aliases com match
+    const { data: matchedRecords } = await supabase
+      .from('salesforce_records')
+      .select('sf_alias')
+      .not('transaction_id', 'is', null)
+
+    const matchedAliases = new Set((matchedRecords ?? []).map(r => r.sf_alias).filter(Boolean))
+
+    const countMap = new Map<string, { owner_name: string | null; count: number }>()
+    for (const r of (noMatchRecords ?? [])) {
+      if (!r.sf_alias) continue
+      const existing = countMap.get(r.sf_alias)
+      if (existing) existing.count++
+      else countMap.set(r.sf_alias, { owner_name: r.owner_name, count: 1 })
+    }
+    unmatched = Array.from(countMap.entries())
+      .map(([sf_alias, v]) => ({ sf_alias, owner_name: v.owner_name, count: v.count, matched: matchedAliases.has(sf_alias) }))
+      .sort((a, b) => b.count - a.count)
+
+    // Usuários com sf_alias configurado
+    const { data: usersWithAlias } = await supabase
+      .from('users')
+      .select('id, name, sf_alias')
+      .eq('role', 'participant')
+      .order('name')
+    participantAliases = (usersWithAlias ?? []) as typeof participantAliases
   }
 
   // Log tab
@@ -110,6 +150,7 @@ export default async function SalesforceImportsPage({ searchParams }: Props) {
         <div style={{ display: 'flex', borderBottom: '2px solid rgba(63,62,62,0.08)', gap: '0.1rem' }}>
           <a href={tabLink('records')} style={tabStyle('records')}>Registros</a>
           <a href={tabLink('log')} style={tabStyle('log')}>Log de Sincronização</a>
+          <a href={tabLink('aliases')} style={tabStyle('aliases')}>Aliases sem match</a>
         </div>
 
         {tab === 'records' && (
@@ -186,6 +227,90 @@ export default async function SalesforceImportsPage({ searchParams }: Props) {
               </div>
             )}
           </>
+        )}
+
+        {tab === 'aliases' && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.2rem', alignItems: 'start' }}>
+            {/* Aliases sem match vindos do SF */}
+            <div className="sc-card" style={{ padding: 0, overflow: 'hidden' }}>
+              <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid rgba(63,62,62,0.08)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#3F3E3E' }}>Aliases do Salesforce sem match</span>
+                {unmatched.length > 0 && (
+                  <span style={{ fontSize: '0.7rem', background: 'rgba(220,53,69,0.1)', color: '#dc3545', padding: '0.1rem 0.45rem', borderRadius: '0 0.25rem 0.25rem 0.25rem', fontWeight: 600 }}>
+                    {unmatched.filter(u => !u.matched).length} pendente(s)
+                  </span>
+                )}
+              </div>
+              {unmatched.length === 0 ? (
+                <p style={{ padding: '2rem', textAlign: 'center', fontSize: '0.82rem', color: 'rgba(63,62,62,0.4)' }}>
+                  Nenhum registro sem match. Tudo certo! ✓
+                </p>
+              ) : (
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ background: 'rgba(63,62,62,0.02)' }}>
+                      {['Alias SF', 'Proprietário', 'Qtd registros', 'Status'].map(h => (
+                        <th key={h} style={{ padding: '0.5rem 1rem', textAlign: 'left', fontSize: '0.7rem', fontWeight: 600, color: 'rgba(63,62,62,0.45)', borderBottom: '1px solid rgba(63,62,62,0.08)' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {unmatched.map(row => (
+                      <tr key={row.sf_alias}>
+                        <td style={{ padding: '0.5rem 1rem', borderBottom: '1px solid rgba(63,62,62,0.05)' }}>
+                          <code style={{ fontSize: '0.78rem', background: 'rgba(220,53,69,0.06)', color: '#dc3545', padding: '0.1rem 0.4rem', borderRadius: '0 0.25rem 0.25rem 0.25rem', fontWeight: 600 }}>{row.sf_alias}</code>
+                        </td>
+                        <td style={{ padding: '0.5rem 1rem', fontSize: '0.78rem', color: '#3F3E3E', borderBottom: '1px solid rgba(63,62,62,0.05)' }}>{row.owner_name ?? '—'}</td>
+                        <td style={{ padding: '0.5rem 1rem', fontSize: '0.78rem', textAlign: 'center', color: 'rgba(63,62,62,0.6)', borderBottom: '1px solid rgba(63,62,62,0.05)' }}>{row.count}</td>
+                        <td style={{ padding: '0.5rem 1rem', borderBottom: '1px solid rgba(63,62,62,0.05)' }}>
+                          {row.matched
+                            ? <span style={{ fontSize: '0.7rem', color: '#5C7435', fontWeight: 600 }}>✓ já pontuado</span>
+                            : <span style={{ fontSize: '0.7rem', color: '#dc3545', fontWeight: 600 }}>⚠ sem usuário</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            {/* Usuários e seus sf_alias */}
+            <div className="sc-card" style={{ padding: 0, overflow: 'hidden' }}>
+              <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid rgba(63,62,62,0.08)' }}>
+                <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#3F3E3E' }}>Alias configurado nos participantes</span>
+              </div>
+              <p style={{ padding: '0.6rem 1rem 0.4rem', fontSize: '0.72rem', color: 'rgba(63,62,62,0.45)' }}>
+                Configure o alias em <strong>Usuários → Editar usuário → Alias Salesforce</strong>
+              </p>
+              {participantAliases.length === 0 ? (
+                <p style={{ padding: '2rem', textAlign: 'center', fontSize: '0.82rem', color: 'rgba(63,62,62,0.4)' }}>Nenhum participante encontrado.</p>
+              ) : (
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ background: 'rgba(63,62,62,0.02)' }}>
+                      {['Participante', 'Alias SF'].map(h => (
+                        <th key={h} style={{ padding: '0.5rem 1rem', textAlign: 'left', fontSize: '0.7rem', fontWeight: 600, color: 'rgba(63,62,62,0.45)', borderBottom: '1px solid rgba(63,62,62,0.08)' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {participantAliases.map(u => (
+                      <tr key={u.id}>
+                        <td style={{ padding: '0.5rem 1rem', borderBottom: '1px solid rgba(63,62,62,0.05)' }}>
+                          <a href={`/manager/users/${u.id}`} style={{ fontSize: '0.78rem', color: '#8DB23C', textDecoration: 'none', fontWeight: 500 }}>{u.name} ↗</a>
+                        </td>
+                        <td style={{ padding: '0.5rem 1rem', borderBottom: '1px solid rgba(63,62,62,0.05)' }}>
+                          {u.sf_alias
+                            ? <code style={{ fontSize: '0.78rem', background: 'rgba(141,178,60,0.1)', color: '#5C7435', padding: '0.1rem 0.4rem', borderRadius: '0 0.25rem 0.25rem 0.25rem' }}>{u.sf_alias}</code>
+                            : <span style={{ fontSize: '0.72rem', color: '#dc3545' }}>⚠ não configurado</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
         )}
 
         {tab === 'log' && (
