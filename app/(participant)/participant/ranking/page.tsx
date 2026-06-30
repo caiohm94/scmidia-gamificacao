@@ -51,7 +51,7 @@ function ClassificacaoList({ rows, highlightUserId }: { rows: CampaignRanking[];
 
             {/* Avatar */}
             <div style={{
-              width: 52, height: 52, flexShrink: 0,
+              width: 64, height: 64, flexShrink: 0,
               borderRadius: '0 0.6rem 0.6rem 0.6rem',
               overflow: 'hidden',
               border: isMe ? '2px solid #8DB23C' : '1.5px solid rgba(255,255,255,0.1)',
@@ -59,7 +59,7 @@ function ClassificacaoList({ rows, highlightUserId }: { rows: CampaignRanking[];
               {row.avatar_url ? (
                 <img src={row.avatar_url} alt={row.name ?? ''} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }} />
               ) : (
-                <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg,#8DB23C,#5C7435)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', fontWeight: 800, color: '#fff', fontFamily: 'var(--font-outfit)' }}>
+                <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg,#8DB23C,#5C7435)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', fontWeight: 800, color: '#fff', fontFamily: 'var(--font-outfit)' }}>
                   {row.name?.charAt(0).toUpperCase() ?? '?'}
                 </div>
               )}

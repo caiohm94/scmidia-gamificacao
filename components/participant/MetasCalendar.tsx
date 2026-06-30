@@ -81,7 +81,7 @@ export function MetasCalendar({ days, goals, year, month, today, rule, is_cumula
   const selectedColor = selectedPctRaw >= 100 ? '#8DB23C' : selectedPctRaw >= 75 ? '#FFDF00' : '#ef4444'
 
   const cutoffDate = selectedDate ?? today
-  const monthTotalActual = goals.reduce((s, g) => s + (g.actual_value ?? 0), 0)
+  const monthTotalActual = goals.filter(g => g.period_date <= cutoffDate).reduce((s, g) => s + (g.actual_value ?? 0), 0)
   const monthTargetUntilCutoff = goals.filter(g => g.period_date <= cutoffDate).reduce((s, g) => s + g.target_value, 0)
   const monthPctRaw = monthTargetUntilCutoff > 0 ? (monthTotalActual / monthTargetUntilCutoff) * 100 : 0
   const monthPct = Math.min(monthPctRaw, 100)

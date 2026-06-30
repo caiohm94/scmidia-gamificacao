@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { toast } from 'sonner'
 import { formatValueFull } from '@/lib/goals/helpers'
 import type { ParticipantGoalRow } from '@/types/database'
@@ -34,8 +34,10 @@ export function RealizadoTab({ ruleId, campaignId, participants, valueType, deci
   const [selectedDate, setSelectedDate] = useState(todayDate())
   const [goals, setGoals] = useState<ParticipantGoalRow[]>([])
   const [actualInputs, setActualInputs] = useState<Record<string, string>>({})
+  const [focusedId, setFocusedId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const inputRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
   const [year, m] = selectedDate.split('-').map(Number)
 
@@ -60,8 +62,6 @@ export function RealizadoTab({ ruleId, campaignId, participants, valueType, deci
   useEffect(() => { load() }, [load])
 
   function getGoalForDate(userId: string) {
-    // For monthly rules: first look for a daily entry on selectedDate,
-    // then fall back to the monthly record (stored on the 1st of the month).
     if (isMonthly) {
       const daily = goals.find(g => g.user_id === userId && g.period_date === selectedDate)
       if (daily) return daily
@@ -72,13 +72,11 @@ export function RealizadoTab({ ruleId, campaignId, participants, valueType, deci
     return goals.find(g => g.user_id === userId && g.period_date === selectedDate)
   }
 
-  function getStatus(goal: ParticipantGoalRow | undefined, inputValue: string) {
+  function pctFor(goal: ParticipantGoalRow | undefined, inputValue: string) {
     if (!goal?.target_value) return null
     const actual = parseFloat(inputValue)
     if (isNaN(actual)) return null
-    const pct = Math.round((actual / goal.target_value) * 100)
-    if (actual >= goal.target_value) return { label: '✅ Bateu', color: '#5C7435', bg: 'rgba(92,116,53,0.1)' }
-    return { label: `${pct}%`, color: '#8B6914', bg: 'rgba(255,193,7,0.15)' }
+    return (actual / goal.target_value) * 100
   }
 
   async function handleSaveAll() {
@@ -89,8 +87,6 @@ export function RealizadoTab({ ruleId, campaignId, participants, valueType, deci
         if (!goal?.target_value || val === undefined || val === '') return null
         const num = parseFloat(val.replace(',', '.'))
         if (isNaN(num)) return null
-        // Monthly rules: always upsert on the monthly record (1st of month)
-        // so the participant always sees the latest total vs the monthly target.
         const [y, mo] = selectedDate.split('-')
         const saveDate = isMonthly ? `${y}-${mo}-01` : selectedDate
         return {
@@ -124,39 +120,91 @@ export function RealizadoTab({ ruleId, campaignId, participants, valueType, deci
     }
   }
 
-  const inputStyle = {
-    border: '1px solid rgba(63,62,62,0.2)',
-    borderRadius: '0 0.35rem 0.35rem 0.35rem',
-    padding: '0.3rem 0.5rem',
-    fontSize: '0.82rem',
-    color: '#3F3E3E',
-    width: 120,
+  // Key navigation: Enter/Tab to move to next row
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>, idx: number) {
+    if (e.key === 'Enter' || e.key === 'Tab') {
+      e.preventDefault()
+      const next = participants[idx + 1]
+      if (next) {
+        inputRefs.current[next.id]?.focus()
+      } else {
+        handleSaveAll()
+      }
+    }
   }
 
-  if (loading) return <p style={{ color: 'rgba(63,62,62,0.4)', fontSize: '0.85rem' }}>Carregando...</p>
+  if (loading) return <p style={{ color: 'rgba(63,62,62,0.4)', fontSize: '0.85rem', padding: '1rem 0' }}>Carregando...</p>
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <button onClick={() => setSelectedDate(d => shiftDate(d, -1))} style={{ ...inputStyle, width: 32, textAlign: 'center', padding: '0.3rem', cursor: 'pointer' }}>←</button>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      <style>{`
+        .realizado-cell-input {
+          background: transparent;
+          border: none;
+          outline: none;
+          width: 100%;
+          padding: 0;
+          font-size: 0.85rem;
+          font-family: var(--font-outfit, sans-serif);
+          color: #1a1a1a;
+          caret-color: #1557b0;
+        }
+        .realizado-cell-input:disabled {
+          color: rgba(63,62,62,0.35);
+          cursor: default;
+        }
+        .realizado-cell-input::placeholder {
+          color: rgba(63,62,62,0.3);
+        }
+        .realizado-row:hover .realizado-cell {
+          background: rgba(66,133,244,0.04);
+        }
+        .realizado-cell.focused {
+          background: #e8f0fe !important;
+          box-shadow: inset 0 0 0 2px #1557b0;
+        }
+      `}</style>
+
+      {/* Date picker row — minimal, spreadsheet-toolbar style */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '0.35rem',
+        padding: '0.4rem 0.6rem',
+        background: '#f8f9fa',
+        border: '1px solid #e0e0e0',
+        borderRadius: '0 0.3rem 0.3rem 0.3rem',
+        width: 'fit-content',
+      }}>
+        <button
+          onClick={() => setSelectedDate(d => shiftDate(d, -1))}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.35rem', fontSize: '0.9rem', color: '#5f6368', lineHeight: 1 }}
+        >←</button>
         <input
           type="date"
           value={selectedDate}
           onChange={e => setSelectedDate(e.target.value)}
-          style={{ ...inputStyle, width: 'auto' }}
+          style={{ border: 'none', background: 'none', outline: 'none', fontSize: '0.82rem', color: '#3c4043', fontFamily: 'var(--font-outfit)', cursor: 'pointer' }}
         />
-        <button onClick={() => setSelectedDate(d => shiftDate(d, +1))} style={{ ...inputStyle, width: 32, textAlign: 'center', padding: '0.3rem', cursor: 'pointer' }}>→</button>
-        <span style={{ fontSize: '0.78rem', color: 'rgba(63,62,62,0.45)', fontFamily: 'var(--font-outfit)' }}>
+        <button
+          onClick={() => setSelectedDate(d => shiftDate(d, +1))}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.35rem', fontSize: '0.9rem', color: '#5f6368', lineHeight: 1 }}
+        >→</button>
+        <span style={{ borderLeft: '1px solid #e0e0e0', paddingLeft: '0.5rem', marginLeft: '0.1rem', fontSize: '0.78rem', color: '#80868b', fontFamily: 'var(--font-outfit)' }}>
           {formatDateLabel(selectedDate)}
         </span>
       </div>
 
-      <div className="sc-card" style={{ padding: 0, overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+      {/* Spreadsheet table */}
+      <div style={{ border: '1px solid #e0e0e0', borderRadius: '0 0.4rem 0.4rem 0.4rem', overflow: 'hidden', background: '#fff' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', fontFamily: 'var(--font-outfit, sans-serif)' }}>
           <thead>
-            <tr style={{ background: 'rgba(63,62,62,0.04)', borderBottom: '1px solid rgba(63,62,62,0.08)' }}>
-              {['Participante', 'Meta', 'Realizado', 'Status'].map(h => (
-                <th key={h} style={{ padding: '0.5rem 0.75rem', textAlign: 'left', fontFamily: 'var(--font-outfit)', fontWeight: 500, fontSize: '0.72rem', color: 'rgba(63,62,62,0.5)' }}>{h}</th>
+            <tr style={{ background: '#f8f9fa', borderBottom: '2px solid #e0e0e0' }}>
+              {['Participante', 'Meta', 'Realizado', 'Atingido'].map(h => (
+                <th key={h} style={{
+                  padding: '0.45rem 0.75rem', textAlign: 'left',
+                  fontSize: '0.72rem', fontWeight: 600,
+                  color: '#5f6368', letterSpacing: '0.02em',
+                  borderRight: h !== 'Atingido' ? '1px solid #e0e0e0' : 'none',
+                }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -164,36 +212,60 @@ export function RealizadoTab({ ruleId, campaignId, participants, valueType, deci
             {participants.map((p, i) => {
               const goal = getGoalForDate(p.id)
               const inputVal = actualInputs[p.id] ?? (goal?.actual_value != null ? String(goal.actual_value) : '')
-              const status = getStatus(goal, inputVal)
+              const pct = pctFor(goal, inputVal)
+              const isFocused = focusedId === p.id
+              const canEdit = !!(goal?.target_value) && !goal?.points_awarded
+
               return (
-                <tr key={p.id} style={{ borderTop: i === 0 ? 'none' : '1px solid rgba(63,62,62,0.06)' }}>
-                  <td style={{ padding: '0.6rem 0.75rem', fontWeight: 500, color: '#3F3E3E' }}>{p.name}</td>
-                  <td style={{ padding: '0.6rem 0.75rem', color: 'rgba(63,62,62,0.6)', fontSize: '0.82rem' }}>
+                <tr key={p.id} className="realizado-row" style={{ borderTop: i === 0 ? 'none' : '1px solid #e0e0e0' }}>
+                  {/* Participante */}
+                  <td className="realizado-cell" style={{ padding: '0 0.75rem', height: 36, borderRight: '1px solid #e0e0e0', color: '#3c4043', fontWeight: 500 }}>
+                    {p.name}
+                  </td>
+
+                  {/* Meta */}
+                  <td className="realizado-cell" style={{ padding: '0 0.75rem', height: 36, borderRight: '1px solid #e0e0e0', color: '#5f6368' }}>
                     {goal?.target_value != null
                       ? formatValueFull(goal.target_value, valueType, decimalPlaces)
-                      : <span style={{ color: 'rgba(63,62,62,0.3)' }}>Sem meta</span>}
+                      : <span style={{ color: '#bdbdbd' }}>Sem meta</span>}
                   </td>
-                  <td style={{ padding: '0.6rem 0.75rem' }}>
+
+                  {/* Realizado — editable cell */}
+                  <td
+                    className={`realizado-cell${isFocused ? ' focused' : ''}`}
+                    style={{ padding: '0 0.75rem', height: 36, borderRight: '1px solid #e0e0e0', cursor: canEdit ? 'text' : 'default', minWidth: 120 }}
+                    onClick={() => canEdit && inputRefs.current[p.id]?.focus()}
+                  >
                     <input
+                      ref={el => { inputRefs.current[p.id] = el }}
                       type="number"
+                      className="realizado-cell-input"
                       value={inputVal}
                       onChange={e => setActualInputs(prev => ({ ...prev, [p.id]: e.target.value }))}
-                      disabled={!goal?.target_value || goal.points_awarded}
-                      placeholder={goal?.target_value ? '0' : '—'}
+                      onFocus={() => setFocusedId(p.id)}
+                      onBlur={() => setFocusedId(null)}
+                      onKeyDown={e => handleKeyDown(e, i)}
+                      disabled={!canEdit}
+                      placeholder={canEdit ? '0' : '—'}
                       title={goal?.points_awarded ? 'Pontos já gerados' : (!goal?.target_value ? 'Defina a meta primeiro' : '')}
-                      style={{ ...inputStyle, opacity: (!goal?.target_value || goal.points_awarded) ? 0.45 : 1 }}
+                      step={decimalPlaces > 0 ? Math.pow(10, -decimalPlaces) : 1}
                     />
                     {goal?.points_awarded && (
-                      <span style={{ marginLeft: '0.4rem', fontSize: '0.7rem', color: '#5C7435' }}>✓ pontuado</span>
+                      <span style={{ fontSize: '0.68rem', color: '#5C7435', marginLeft: '0.3rem' }}>✓</span>
                     )}
                   </td>
-                  <td style={{ padding: '0.6rem 0.75rem' }}>
-                    {status ? (
-                      <span style={{ fontSize: '0.75rem', fontWeight: 500, padding: '0.15rem 0.5rem', borderRadius: '0 0.3rem 0.3rem 0.3rem', background: status.bg, color: status.color }}>
-                        {status.label}
+
+                  {/* Atingido % */}
+                  <td className="realizado-cell" style={{ padding: '0 0.75rem', height: 36 }}>
+                    {pct != null ? (
+                      <span style={{
+                        fontSize: '0.75rem', fontWeight: 600,
+                        color: pct >= 100 ? '#2e7d32' : pct >= 75 ? '#8B6914' : '#c62828',
+                      }}>
+                        {pct >= 100 ? '✅ ' : ''}{Math.round(pct)}%
                       </span>
                     ) : (
-                      <span style={{ fontSize: '0.75rem', color: 'rgba(63,62,62,0.3)' }}>—</span>
+                      <span style={{ color: '#bdbdbd', fontSize: '0.75rem' }}>—</span>
                     )}
                   </td>
                 </tr>
@@ -210,7 +282,7 @@ export function RealizadoTab({ ruleId, campaignId, participants, valueType, deci
           className="sc-btn-primary"
           style={{ opacity: saving ? 0.6 : 1 }}
         >
-          {saving ? 'Salvando...' : 'Salvar tudo'}
+          {saving ? 'Salvando...' : 'Salvar'}
         </button>
       </div>
     </div>
