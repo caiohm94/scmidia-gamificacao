@@ -75,6 +75,14 @@ export async function GET(request: NextRequest) {
 <body>
 <iframe id="bi-frame" src="${biUrl || 'about:blank'}" allow="fullscreen"></iframe>
 
+<!-- Status bar: connection + test button (bottom-right corner) -->
+<div id="statusbar" style="position:fixed;bottom:12px;right:12px;z-index:8888;display:flex;align-items:center;gap:8px;background:rgba(0,0,0,0.55);padding:6px 10px;border-radius:6px;font-family:sans-serif;font-size:11px;color:#fff;backdrop-filter:blur(4px)">
+  <span id="conn-dot" style="width:8px;height:8px;border-radius:50%;background:#555;display:inline-block"></span>
+  <span id="conn-label">conectando…</span>
+  <button onclick="testCelebration(false)" style="margin-left:6px;padding:2px 8px;font-size:10px;background:#8DB23C;border:none;border-radius:4px;color:#fff;cursor:pointer">⚽ Testar</button>
+  <button onclick="testCelebration(true)"  style="padding:2px 8px;font-size:10px;background:#ef4444;border:none;border-radius:4px;color:#fff;cursor:pointer">🟥 Testar</button>
+</div>
+
 <div id="overlay">
   <div id="confetti-box"></div>
   <div id="top-stripe"></div>
@@ -232,7 +240,34 @@ function showCelebration(ev) {
   }, DURATION_MS)
 }
 
+// Test function (buttons in status bar)
+function testCelebration(isFoul) {
+  showCelebration({
+    user_id: 'test',
+    points: isFoul ? -10 : 50,
+    rule_name: isFoul ? 'Falta' : 'Ligação Realizada',
+    message: isFoul ? 'Teste falta' : 'Teste gol',
+    user_name: 'Participante Teste',
+    avatar_url: null
+  })
+}
+
 // Subscribe to celebration events
+function setConnStatus(state) {
+  const dot = document.getElementById('conn-dot')
+  const label = document.getElementById('conn-label')
+  if (!dot || !label) return
+  const map = {
+    SUBSCRIBED:   ['#8DB23C', 'conectado'],
+    CHANNEL_ERROR:['#ef4444', 'erro'],
+    TIMED_OUT:    ['#f97316', 'timeout'],
+    CLOSED:       ['#555',    'desconectado'],
+  }
+  const [color, text] = map[state] || ['#f59e0b', state.toLowerCase()]
+  dot.style.background = color
+  label.textContent = text
+}
+
 sb.channel('bi-overlay-' + CAMPAIGN_ID)
   .on('postgres_changes', {
     event: 'INSERT', schema: 'public', table: 'celebration_events',
@@ -249,7 +284,7 @@ sb.channel('bi-overlay-' + CAMPAIGN_ID)
       avatar_url: cpRes.data?.photo_url || undefined
     })
   })
-  .subscribe()
+  .subscribe((status) => setConnStatus(status))
 </script>
 </body>
 </html>`
