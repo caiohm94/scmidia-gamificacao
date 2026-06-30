@@ -30,17 +30,20 @@ export function FeedItem({ event }: { event: FeedEvent }) {
       border: '1px solid var(--p-card-border)',
     }}>
       <div style={{ fontSize: '1.3rem', marginTop: 2, flexShrink: 0 }}>
-        {event.event_type === 'point_earned' ? '⚽' :
-         event.event_type === 'level_up' ? '🏅' :
-         event.event_type === 'bonus_earned' ? '⭐' :
-         event.event_type === 'streak_milestone' ? '🔥' : '📢'}
+        {event.event_type === 'point_earned'
+          ? (Number(payload.points) < 0 ? '🟥' : '⚽')
+          : event.event_type === 'level_up' ? '🏅'
+          : event.event_type === 'bonus_earned' ? '⭐'
+          : event.event_type === 'streak_milestone' ? '🔥' : '📢'}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{ fontSize: '0.85rem', color: 'var(--p-text)', margin: 0 }}>
           <span style={{ fontWeight: 600 }}>{payload.user_name}</span>
           {' '}{eventLabels[event.event_type] ?? event.event_type}
-          {event.event_type === 'point_earned' && payload.points && (
-            <span style={{ marginLeft: '0.25rem', color: '#FFDF00', fontWeight: 700 }}>+{payload.points} pts</span>
+          {event.event_type === 'point_earned' && payload.points != null && (
+            <span style={{ marginLeft: '0.25rem', color: Number(payload.points) < 0 ? '#ef4444' : '#FFDF00', fontWeight: 700 }}>
+              {Number(payload.points) > 0 ? '+' : ''}{payload.points} pts
+            </span>
           )}
         </p>
         {payload.rule_name && (
