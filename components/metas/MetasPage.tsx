@@ -5,7 +5,7 @@ import { MetasMatrixTab } from './MetasMatrixTab'
 import { RealizadoTab } from './RealizadoTab'
 
 type Campaign = { id: string; name: string }
-type Rule = { id: string; name: string; points: number; target_period: string | null; campaign_id: string; category: string; value_type: string; decimal_places: number; is_active: boolean; applies_to: string }
+type Rule = { id: string; name: string; points: number; target_period: string | null; campaign_id: string; category: string; value_type: string; decimal_places: number; is_active: boolean; applies_to: string; is_cumulative: boolean }
 type Participant = { id: string; name: string; function: string }
 
 interface Props {
@@ -152,6 +152,7 @@ export function MetasPage({ campaigns, initialCampaignId, initialRuleId, initial
               valueType={selectedRule?.value_type ?? 'number'}
               decimalPlaces={selectedRule?.decimal_places ?? 0}
               targetPeriod={selectedRule?.target_period ?? 'daily'}
+              isCumulative={selectedRule?.is_cumulative ?? false}
             />
           )}
           {tab === 'realizado' && (

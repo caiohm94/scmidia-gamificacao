@@ -1,3 +1,8 @@
+// Returns today's date in Brazil timezone (UTC-3 / America/Sao_Paulo)
+export function todayBrazil(): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date())
+}
+
 export function getDaysInMonth(year: number, month: number): number[] {
   const count = new Date(year, month, 0).getDate()
   return Array.from({ length: count }, (_, i) => i + 1)

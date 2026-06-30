@@ -44,6 +44,10 @@ export async function POST(req: NextRequest) {
 
   const toInsert = days
     .map(d => periodDateForDay(year, m, d))
+    .filter(date => {
+      const dow = new Date(date + 'T12:00:00').getDay()
+      return dow !== 0 && dow !== 6 // somente seg-sex
+    })
     .filter(date => !existingMap.has(date))
     .map(date => ({
       scoring_rule_id,

@@ -15,8 +15,17 @@ interface Props {
 }
 
 function todayDate() {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date())
+}
+
+function shiftDate(dateStr: string, days: number): string {
+  const d = new Date(dateStr + 'T12:00:00')
+  d.setDate(d.getDate() + days)
+  return d.toISOString().slice(0, 10)
+}
+
+function formatDateLabel(dateStr: string): string {
+  return new Date(dateStr + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
 export function RealizadoTab({ ruleId, campaignId, participants, valueType, decimalPlaces }: Props) {
@@ -113,14 +122,18 @@ export function RealizadoTab({ ruleId, campaignId, participants, valueType, deci
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-        <label style={{ fontSize: '0.82rem', color: 'rgba(63,62,62,0.6)', fontFamily: 'var(--font-outfit)' }}>Data:</label>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <button onClick={() => setSelectedDate(d => shiftDate(d, -1))} style={{ ...inputStyle, width: 32, textAlign: 'center', padding: '0.3rem', cursor: 'pointer' }}>←</button>
         <input
           type="date"
           value={selectedDate}
           onChange={e => setSelectedDate(e.target.value)}
-          style={inputStyle}
+          style={{ ...inputStyle, width: 'auto' }}
         />
+        <button onClick={() => setSelectedDate(d => shiftDate(d, +1))} style={{ ...inputStyle, width: 32, textAlign: 'center', padding: '0.3rem', cursor: 'pointer' }}>→</button>
+        <span style={{ fontSize: '0.78rem', color: 'rgba(63,62,62,0.45)', fontFamily: 'var(--font-outfit)' }}>
+          {formatDateLabel(selectedDate)}
+        </span>
       </div>
 
       <div className="sc-card" style={{ padding: 0, overflow: 'hidden' }}>

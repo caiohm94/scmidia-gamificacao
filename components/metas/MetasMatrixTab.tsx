@@ -14,6 +14,7 @@ interface Props {
   valueType: string
   decimalPlaces: number
   targetPeriod?: string | null
+  isCumulative?: boolean
 }
 
 
@@ -33,9 +34,10 @@ const ROW_H = 40
 const BORDER = '1px solid #e2e4e7'
 const BORDER_HEAVY = '2px solid #d0d3d8'
 
-export function MetasMatrixTab({ ruleId, campaignId, month, participants, valueType, decimalPlaces, targetPeriod }: Props) {
+export function MetasMatrixTab({ ruleId, campaignId, month, participants, valueType, decimalPlaces, targetPeriod, isCumulative }: Props) {
   const { year, month: m } = parseMonthParam(month)
   const isMonthly = targetPeriod === 'monthly'
+  const showTotal = !isMonthly && isCumulative
   const days = isMonthly ? [1] : getDaysInMonth(year, m)
   // For monthly rules, period_date is always the 1st of the month
   const monthlyDate = `${year}-${String(m).padStart(2, '0')}-01`
@@ -234,10 +236,20 @@ export function MetasMatrixTab({ ruleId, campaignId, month, participants, valueT
                   {String(d).padStart(2, '0')}
                 </th>
               ))}
+              {showTotal && (
+                <th style={{
+                  minWidth: 80, padding: '0.5rem 0.5rem', textAlign: 'right', fontSize: '0.7rem',
+                  color: 'rgba(63,62,62,0.55)', fontFamily: 'var(--font-outfit)', fontWeight: 700,
+                  borderBottom: BORDER_HEAVY, borderLeft: BORDER_HEAVY,
+                  whiteSpace: 'nowrap', background: 'rgba(141,178,60,0.06)',
+                }}>
+                  Total
+                </th>
+              )}
               <th style={{
                 padding: '0.5rem 0.5rem', textAlign: 'center', fontSize: '0.7rem',
                 color: 'rgba(63,62,62,0.4)', fontFamily: 'var(--font-outfit)', fontWeight: 500,
-                borderBottom: BORDER_HEAVY, borderLeft: BORDER_HEAVY,
+                borderBottom: BORDER_HEAVY, borderLeft: showTotal ? BORDER : BORDER_HEAVY,
                 whiteSpace: 'nowrap',
               }}>
                 Ações
@@ -310,8 +322,25 @@ export function MetasMatrixTab({ ruleId, campaignId, month, participants, valueT
                     </td>
                   )
                 })}
+                {showTotal && (() => {
+                  const total = days.reduce((s, d) => {
+                    const date = periodDateForDay(year, m, d)
+                    return s + (savedValues[cellKey(p.id, date)] ?? 0)
+                  }, 0)
+                  return (
+                    <td style={{
+                      borderTop: BORDER, borderLeft: BORDER_HEAVY,
+                      padding: '0 0.75rem', textAlign: 'right', height: ROW_H,
+                      background: 'rgba(141,178,60,0.06)', fontWeight: 700,
+                      fontSize: '0.78rem', color: '#3F3E3E', whiteSpace: 'nowrap',
+                      fontFamily: 'var(--font-outfit, sans-serif)',
+                    }}>
+                      {total > 0 ? formatValueCompact(total, valueType, decimalPlaces) : '—'}
+                    </td>
+                  )
+                })()}
                 <td style={{
-                  borderTop: BORDER, borderLeft: BORDER_HEAVY,
+                  borderTop: BORDER, borderLeft: showTotal ? BORDER : BORDER_HEAVY,
                   padding: '0 0.5rem', whiteSpace: 'nowrap', textAlign: 'center', height: ROW_H,
                 }}>
                   {!isMonthly && (

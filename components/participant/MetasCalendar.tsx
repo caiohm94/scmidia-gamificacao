@@ -62,18 +62,21 @@ export function MetasCalendar({ days, goals, year, month, today, rule, is_cumula
 
   const selectedGoal = selectedDay != null ? goalForDay(selectedDay) : null
   const selectedDate = selectedDay != null ? dateStr(selectedDay) : null
-  const selectedPct = selectedGoal && selectedGoal.target_value > 0
-    ? Math.min(((selectedGoal.actual_value ?? 0) / selectedGoal.target_value) * 100, 100)
+  // Real % without capping — user can exceed 100%
+  const selectedPctRaw = selectedGoal && selectedGoal.target_value > 0
+    ? ((selectedGoal.actual_value ?? 0) / selectedGoal.target_value) * 100
     : 0
+  const selectedPct = Math.min(selectedPctRaw, 100) // for visual bar only
   const selectedAchieved = selectedGoal != null
     && selectedGoal.actual_value != null
     && selectedGoal.actual_value >= selectedGoal.target_value
 
-  // Month totals for cumulative — target is up to today, not full month
+  // Acumulado: usa a data do dia selecionado quando há seleção, senão usa hoje
+  const cutoffDate = selectedDate ?? today
   const monthTotalActual = goals.reduce((s, g) => s + (g.actual_value ?? 0), 0)
-  const monthTargetUntilToday = goals.filter(g => g.period_date <= today).reduce((s, g) => s + g.target_value, 0)
-  const monthPct = monthTargetUntilToday > 0 ? Math.min((monthTotalActual / monthTargetUntilToday) * 100, 100) : 0
-  const monthAchieved = monthTotalActual >= monthTargetUntilToday && monthTargetUntilToday > 0
+  const monthTargetUntilCutoff = goals.filter(g => g.period_date <= cutoffDate).reduce((s, g) => s + g.target_value, 0)
+  const monthPct = monthTargetUntilCutoff > 0 ? Math.min((monthTotalActual / monthTargetUntilCutoff) * 100, 100) : 0
+  const monthAchieved = monthTotalActual >= monthTargetUntilCutoff && monthTargetUntilCutoff > 0
 
   // Bar chart data
   const sparkData = days.map(d => {
@@ -183,7 +186,7 @@ export function MetasCalendar({ days, goals, year, month, today, rule, is_cumula
                 </div>
                 <div style={{ background: selectedAchieved ? 'rgba(141,178,60,0.1)' : 'rgba(249,115,22,0.08)', borderRadius: '0 0.5rem 0.5rem 0.5rem', padding: '0.6rem', border: `1px solid ${selectedAchieved ? 'rgba(141,178,60,0.25)' : 'rgba(249,115,22,0.2)'}` }}>
                   <p style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, fontFamily: 'var(--font-outfit)', color: selectedAchieved ? '#8DB23C' : '#f97316' }}>
-                    {Math.round(selectedPct)}%
+                    {Math.round(selectedPctRaw)}%
                   </p>
                   <p style={{ margin: 0, fontSize: '0.65rem', color: muted }}>{selectedAchieved ? '✅ meta batida' : 'atingido'}</p>
                 </div>
@@ -204,9 +207,9 @@ export function MetasCalendar({ days, goals, year, month, today, rule, is_cumula
                     </div>
                     <div style={{ background: 'var(--p-card-bg)', border: `1px solid ${cardBorder}`, borderRadius: '0 0.5rem 0.5rem 0.5rem', padding: '0.6rem' }}>
                       <p style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, fontFamily: 'var(--font-outfit)', color: 'var(--p-text-dim)' }}>
-                        {formatValueCompact(monthTargetUntilToday, vt, dp)}
+                        {formatValueCompact(monthTargetUntilCutoff, vt, dp)}
                       </p>
-                      <p style={{ margin: 0, fontSize: '0.65rem', color: muted }}>orçado até hoje</p>
+                      <p style={{ margin: 0, fontSize: '0.65rem', color: muted }}>{selectedDate ? `orçado até dia ${selectedDay}` : 'orçado até hoje'}</p>
                     </div>
                     <div style={{ background: monthAchieved ? 'rgba(141,178,60,0.1)' : 'rgba(249,115,22,0.08)', borderRadius: '0 0.5rem 0.5rem 0.5rem', padding: '0.6rem', border: `1px solid ${monthAchieved ? 'rgba(141,178,60,0.25)' : 'rgba(249,115,22,0.2)'}` }}>
                       <p style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, fontFamily: 'var(--font-outfit)', color: monthAchieved ? '#8DB23C' : '#f97316' }}>

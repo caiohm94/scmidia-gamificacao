@@ -10,7 +10,7 @@ import { AnimatedCounter } from '@/components/participant/AnimatedCounter'
 import { GoalProgressBar } from '@/components/participant/GoalProgressBar'
 import { MetasCalendar } from '@/components/participant/MetasCalendar'
 import { PreviewShell } from '@/components/participant/PreviewShell'
-import { getDaysInMonth } from '@/lib/goals/helpers'
+import { getDaysInMonth, todayBrazil } from '@/lib/goals/helpers'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import Image from 'next/image'
@@ -88,7 +88,7 @@ export default async function PreviewPage({
       .eq('user_id', userId).eq('campaign_id', campaign.id)
     earnedBonuses = (bonuses ?? []) as BonusEntry[]
 
-    const todayStr = new Date().toISOString().slice(0, 10)
+    const todayStr = todayBrazil()
     const [gy, gm] = todayStr.slice(0, 7).split('-').map(Number)
     previewYear = gy
     previewMonth = gm
@@ -318,7 +318,7 @@ export default async function PreviewPage({
             byRule.set(g.scoring_rule_id, arr)
           }
           const days = getDaysInMonth(previewYear, previewMonth)
-          const todayStr = new Date().toISOString().slice(0, 10)
+          const todayStr = todayBrazil()
           const monthLabel = previewYear > 0
             ? new Date(previewYear, previewMonth - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
             : ''

@@ -6,6 +6,7 @@ import { StreakBadge } from '@/components/game/StreakBadge'
 import { AnimatedCounter } from '@/components/participant/AnimatedCounter'
 import { GoalProgressBar } from '@/components/participant/GoalProgressBar'
 import { PointsHistory } from '@/components/participant/PointsHistory'
+import { todayBrazil } from '@/lib/goals/helpers'
 import type { Tables } from '@/types/database'
 
 type PointWithRule = Tables<'point_transactions'> & {
@@ -64,7 +65,7 @@ export default async function ParticipantDashboard() {
       .eq('user_id', user.id).eq('campaign_id', campaign.id)
     earnedBonuses = (bonuses ?? []) as BonusEntry[]
 
-    const today = new Date().toISOString().slice(0, 10)
+    const today = todayBrazil()
     const [y, m] = today.slice(0, 7).split('-').map(Number)
     const monthStart = `${y}-${String(m).padStart(2, '0')}-01`
     const lastDay = new Date(y, m, 0).getDate()
