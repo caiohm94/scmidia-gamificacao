@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Trophy, Users, Target, History, Upload, BarChart3, Palette, CloudDownload, TrendingUp } from 'lucide-react'
+import { LayoutDashboard, Trophy, Users, Target, History, BarChart3, Palette, CloudDownload, TrendingUp } from 'lucide-react'
 
 const navItems = [
   { href: '/manager/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -9,7 +9,6 @@ const navItems = [
   { href: '/manager/points', label: 'Lançar Pontos', icon: Target },
   { href: '/manager/metas', label: 'Metas', icon: TrendingUp },
   { href: '/manager/salesforce', label: 'Salesforce', icon: CloudDownload },
-  { href: '/manager/points/import', label: 'Importar CSV', icon: Upload },
   { href: '/manager/rankings', label: 'Rankings', icon: BarChart3 },
   { href: '/manager/points/history', label: 'Auditoria', icon: History },
   { href: '/manager/users', label: 'Usuários', icon: Users },
