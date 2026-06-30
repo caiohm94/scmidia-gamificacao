@@ -81,8 +81,15 @@ function TVAvatar({ src, name, size = 56, glowing = false }: { src?: string | nu
 
   if (src && !err) return (
     <div style={base}>
-      <img src={src} alt={name} onError={() => setErr(true)}
-        style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }} />
+      <Image
+        src={src}
+        alt={name}
+        width={size * 2}
+        height={size * 2}
+        onError={() => setErr(true)}
+        priority
+        style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }}
+      />
     </div>
   )
   return (
@@ -394,7 +401,15 @@ function DisplayPanel() {
       setAuthorized(true); setCampaign(campRow); campaignRef.current = campRow
 
       const { data: r } = await supabase.from('campaign_rankings').select('*').eq('campaign_id', campRow.id).order('position')
-      setRanking((r ?? []) as CampaignRanking[])
+      const rows = (r ?? []) as CampaignRanking[]
+      setRanking(rows)
+      // Preload avatar images so they appear instantly on screen
+      rows.forEach(row => {
+        if (row.avatar_url) {
+          const img = new window.Image()
+          img.src = row.avatar_url
+        }
+      })
 
       const { data: f } = await supabase.from('feed_events').select('*').eq('campaign_id', campRow.id)
         .order('created_at', { ascending: false }).limit(10)
@@ -404,7 +419,9 @@ function DisplayPanel() {
         { event: 'INSERT', schema: 'public', table: 'point_transactions', filter: `campaign_id=eq.${campRow.id}` },
         async () => {
           const { data } = await supabase.from('campaign_rankings').select('*').eq('campaign_id', campRow.id).order('position')
-          setRanking((data ?? []) as CampaignRanking[])
+          const updated = (data ?? []) as CampaignRanking[]
+          updated.forEach(row => { if (row.avatar_url) { const i = new window.Image(); i.src = row.avatar_url } })
+          setRanking(updated)
         }).subscribe()
 
       supabase.channel('tv-feed').on('postgres_changes',
