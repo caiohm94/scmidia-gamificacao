@@ -61,16 +61,8 @@ export async function importRule(ruleId: string, triggeredBy: string): Promise<I
   result.rule_name = rule.name
   const aliasField = rule.sf_alias_field ?? 'Owner.Alias'
 
-  let sfRows: Record<string, unknown>[]
-  try {
-    const conn = await getSalesforceConnection()
-    sfRows = await executeSoql(conn, rule.sf_soql!)
-  } catch (err) {
-    result.errors.push(`Erro SOQL: ${err instanceof Error ? err.message : String(err)}`)
-    await writeLog(0)
-    return result
-  }
-
+  // Resolve participants and their SF aliases BEFORE running the SOQL
+  // so we can inject an alias filter into the query
   const { data: participants } = await admin
     .from('campaign_participants')
     .select('user_id')
@@ -86,6 +78,35 @@ export async function importRule(ruleId: string, triggeredBy: string): Promise<I
     usersQuery = usersQuery.eq('function', rule.applies_to)
   }
   const { data: usersData } = await usersQuery
+
+  // Build alias-filtered SOQL — only fetch records for aliases in this rule's team
+  const knownAliases = (usersData ?? [])
+    .map(u => u.sf_alias)
+    .filter((a): a is string => !!a)
+
+  if (knownAliases.length === 0) {
+    // No participants have sf_alias configured — nothing to match
+    result.errors.push('Nenhum participante com sf_alias configurado para esta regra')
+    await writeLog(0)
+    return result
+  }
+
+  const aliasIn = knownAliases.map(a => `'${a.replace(/'/g, "\\'")}'`).join(', ')
+  const aliasFilter = `${aliasField} IN (${aliasIn})`
+  const baseSoql = rule.sf_soql!.trimEnd().replace(/;$/, '')
+  const filteredSoql = /\bWHERE\b/i.test(baseSoql)
+    ? `${baseSoql} AND ${aliasFilter}`
+    : `${baseSoql} WHERE ${aliasFilter}`
+
+  let sfRows: Record<string, unknown>[]
+  try {
+    const conn = await getSalesforceConnection()
+    sfRows = await executeSoql(conn, filteredSoql)
+  } catch (err) {
+    result.errors.push(`Erro SOQL: ${err instanceof Error ? err.message : String(err)}`)
+    await writeLog(0)
+    return result
+  }
 
   type ParticipantRow = { user_id: string; sf_alias: string | null }
   const participantList: ParticipantRow[] = (participants ?? []).map(p => ({

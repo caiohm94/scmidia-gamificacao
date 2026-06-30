@@ -48,6 +48,7 @@ export default async function CampaignDetailPage({ params }: Props) {
     applies_to: string | null; category: string | null
     sf_soql: string | null; sf_value_field: string | null; sf_alias_field: string | null
     sf_frequency: string | null; sf_run_time: string | null; sf_run_day: number | null
+    value_type: string | null; decimal_places: number | null; is_cumulative: boolean | null
   }
   const { data: rulesRaw, error: rulesError } = await supabase
     .from('scoring_rules')
